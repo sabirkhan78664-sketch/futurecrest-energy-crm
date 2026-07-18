@@ -1,10 +1,20 @@
+import { redirect } from "next/navigation";
+import { getCurrentProfile } from "@/lib/auth";
 import MainLayout from "@/components/layout/MainLayout";
 import { getDashboardStats } from "@/lib/dashboard";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const profile = await getCurrentProfile();
 
+if (!profile) {
+  redirect("/login");
+}
+
+if (profile.status !== "Active") {
+  redirect("/login");
+}
+const stats = await getDashboardStats();
   const cards = [
     {
       title: "Total Leads",
@@ -41,8 +51,8 @@ export default async function DashboardPage() {
           </h1>
 
           <p className="text-gray-500">
-            Welcome to FutureCrest Energy CRM
-          </p>
+  Welcome back, {profile.full_name}
+</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
