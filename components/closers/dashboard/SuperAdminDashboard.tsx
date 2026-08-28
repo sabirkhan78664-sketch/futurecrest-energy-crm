@@ -192,19 +192,10 @@ export default async function SuperAdminDashboard({
     })
     .limit(8);
 
-  // Placeholder trend data — replace with real daily Sold-lead
-  // counts (grouped by day of week) once that query exists.
-  const trendData = [1, 0, 2, 0, 1, 0, 1];
-  const trendDays = [
-    "Mon",
-    "Tue",
-    "Wed",
-    "Thu",
-    "Fri",
-    "Sat",
-    "Sun",
-  ];
-  const maxTrend = Math.max(...trendData, 1);
+  const maxTrend = Math.max(
+    ...metrics.salesTrend.map((day) => day.count),
+    1
+  );
 
   return (
     <div className="space-y-6 pb-12">
@@ -439,35 +430,75 @@ export default async function SuperAdminDashboard({
             Sales trend
           </h3>
 
+          <div className="mb-4 flex items-center justify-between text-center">
+
+            <div className="flex-1">
+              <p className="text-lg font-bold text-slate-900">
+                {metrics.salesTrend14dTotal}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                Total (14d)
+              </p>
+            </div>
+
+            <div className="flex-1">
+              <p className="text-lg font-bold text-slate-900">
+                {metrics.salesTrendBestDay.count}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                Best day
+              </p>
+            </div>
+
+            <div className="flex-1">
+              <p className="text-lg font-bold text-slate-900">
+                {metrics.salesTrendAvgDaily}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                Daily avg
+              </p>
+            </div>
+
+          </div>
+
           <svg
-            viewBox="0 0 280 120"
+            viewBox="0 0 560 120"
             className="h-[120px] w-full overflow-visible"
           >
-            {trendData.map((value, index) => {
-              const slot = 280 / 7;
+            {metrics.salesTrend.map((day, index) => {
+              const slot = 560 / 14;
               const barWidth = 20;
               const x = index * slot + (slot - barWidth) / 2;
-              const barHeight = (value / maxTrend) * 90;
+              const barHeight =
+                day.count > 0
+                  ? (day.count / maxTrend) * 90
+                  : 4;
               const y = 110 - barHeight;
+
+              const fill = day.isToday
+                ? "#2563eb"
+                : day.count > 0
+                ? "#10b981"
+                : "#cbd5e1";
 
               return (
                 <rect
-                  key={index}
+                  key={day.date}
                   x={x}
                   y={y}
                   width={barWidth}
                   height={barHeight}
                   rx={3}
-                  fill="#10b981"
+                  fill={fill}
                 />
               );
             })}
           </svg>
 
           <div className="mt-2 flex justify-between text-[10px] text-slate-400">
-            {trendDays.map((day) => (
-              <span key={day} className="flex-1 text-center">
-                {day}
+            {metrics.salesTrend.map((day, index) => (
+              <span key={day.date} className="flex-1 text-center">
+                {index % 2 === 0 ? day.label : ""}
               </span>
             ))}
           </div>

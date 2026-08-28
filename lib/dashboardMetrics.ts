@@ -71,6 +71,7 @@ export async function getDashboardMetrics(
     phiResult,
     nbnResult,
     retailerDataResult,
+    salesTrendResult,
   ] = await Promise.all([
     // =========================
     // TOTAL LEADS
@@ -201,6 +202,22 @@ export async function getDashboardMetrics(
         .eq("status", "Sold"),
       periodStart
     ),
+
+    // =========================
+    // SALES TREND (last 14 days)
+    // =========================
+    supabase
+      .from("leads")
+      .select("created_at, status, qa_status")
+      .eq("status", "Sold")
+      .neq("qa_status", "Rejected")
+      .gte(
+        "created_at",
+        new Date(
+          Date.now() - 14 * 24 * 60 * 60 * 1000
+        ).toISOString()
+      )
+      .order("created_at", { ascending: true }),
   ]);
 
   // =========================
@@ -274,6 +291,13 @@ export async function getDashboardMetrics(
     console.error(
       "DASHBOARD RETAILER BREAKDOWN ERROR:",
       retailerDataResult.error
+    );
+  }
+
+  if (salesTrendResult.error) {
+    console.error(
+      "DASHBOARD SALES TREND ERROR:",
+      salesTrendResult.error
     );
   }
 
@@ -425,6 +449,47 @@ export async function getDashboardMetrics(
     .sort((a, b) => b.leads - a.leads)
     .slice(0, 5);
 
+  // =========================
+  // SALES TREND (last 14 days)
+  // =========================
+
+  const salesByDay: Record<string, number> = {};
+
+  for (const lead of salesTrendResult.data || []) {
+    const day = lead.created_at.slice(0, 10);
+    salesByDay[day] = (salesByDay[day] || 0) + 1;
+  }
+
+  const salesTrend = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (13 - i));
+    const date = d.toISOString().slice(0, 10);
+
+    return {
+      date,
+      label: d.toLocaleDateString("en-AU", {
+        weekday: "short",
+      }),
+      dayNum: d.getDate(),
+      isToday: i === 13,
+      count: salesByDay[date] || 0,
+    };
+  });
+
+  const salesTrend14dTotal = salesTrend.reduce(
+    (sum, day) => sum + day.count,
+    0
+  );
+
+  const salesTrendBestDay = salesTrend.reduce((a, b) =>
+    b.count > a.count ? b : a
+  );
+
+  const salesTrendAvgDaily =
+    salesTrend14dTotal > 0
+      ? (salesTrend14dTotal / 14).toFixed(1)
+      : "0.0";
+
   return {
     totalLeads,
     pendingApprovals,
@@ -438,5 +503,9 @@ export async function getDashboardMetrics(
     phiLeads,
     nbnLeads,
     retailerBreakdown,
+    salesTrend,
+    salesTrend14dTotal,
+    salesTrendBestDay,
+    salesTrendAvgDaily,
   };
 }
