@@ -12,11 +12,14 @@ export async function createSupabaseServerClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
+
         set() {
-          // Middleware handles cookie updates
+          // Server Components cannot set cookies.
+          // Middleware handles cookie updates.
         },
+
         remove() {
-          // Middleware handles cookie removal
+          // Middleware handles cookie removal.
         },
       },
     }

@@ -1,158 +1,86 @@
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth";
+
 import MainLayout from "@/components/layout/MainLayout";
-import { getDashboardStats } from "@/lib/dashboard";
-import Link from "next/link";
+import LeadsRealtimeRefresher from "@/components/leads/LeadsRealtimeRefresher";
 
-export default async function DashboardPage() {
-  const profile = await getCurrentProfile();
+import SuperAdminDashboard from "@/components/closers/dashboard/SuperAdminDashboard";
+import QADashboard from "@/components/closers/dashboard/QADashboard";
 
-if (!profile) {
-  redirect("/login");
+interface DashboardPageProps {
+  searchParams: Promise<{
+    period?: string;
+  }>;
 }
 
-if (profile.status !== "Active") {
-  redirect("/login");
-}
-const stats = await getDashboardStats();
-  const cards = [
-    {
-      title: "Total Leads",
-      value: stats.totalLeads,
-    },
-    {
-      title: "New Leads",
-      value: stats.newLeads,
-    },
-    {
-      title: "Assigned Leads",
-      value: stats.assignedLeads,
-    },
-    {
-      title: "Unassigned Leads",
-      value: stats.unassignedLeads,
-    },
-    {
-      title: "Sales",
-      value: stats.sales,
-    },
-    {
-      title: "Today's Callbacks",
-      value: stats.callbacksToday,
-    },
-  ];
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
+  const { period = "all" } = await searchParams;
+
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name")
+    .eq("id", user.id)
+    .single();
+
+  const role = profile?.role;
+
+  /*
+   * CLOSER
+   *
+   * The new Closer dashboard lives at /closer.
+   * Redirect Closer users there so /dashboard
+   * does not show the old Closer dashboard.
+   */
+  if (role === "Closer") {
+    redirect("/closer");
+  }
+
+  /*
+   * AGENT
+   *
+   * The real Agent dashboard lives at /agent (Quick Actions layout).
+   * The AgentDashboard component below is an old stub with hardcoded
+   * "--" placeholders that was never wired to real data — redirect
+   * instead of rendering it, same pattern as the Closer redirect above.
+   */
+  if (role === "Agent" || role === "Channel Partner") {
+    redirect("/agent");
+  }
 
   return (
     <MainLayout>
-      <div className="space-y-8">
-        <div>
+      <LeadsRealtimeRefresher />
+
+      <div className="space-y-6">
+
+        {/* HEADER */}
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">
-            Dashboard
+            Welcome back, {profile?.full_name || "User"}{" "}
+            {role ? `(${role})` : ""}
           </h1>
-
-          <p className="text-gray-500">
-  Welcome back, {profile.full_name}
-</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
-            <div
-              key={card.title}
-              className="rounded-xl border bg-white p-6 shadow-sm"
-            >
-              <p className="text-sm text-gray-500">
-                {card.title}
-              </p>
+        {/* SUPER ADMIN / ADMIN */}
+        {(role === "Super Admin" || role === "Admin") && (
+          <SuperAdminDashboard period={period} />
+        )}
 
-              <h2 className="mt-2 text-4xl font-bold text-blue-700">
-                {card.value}
-              </h2>
-            </div>
-          ))}
-        </div>
+        {/* QA */}
+        {role === "QA" && <QADashboard period={period} />}
 
-        <div className="rounded-xl border bg-white shadow">
-          <div className="border-b px-6 py-4">
-            <h2 className="font-semibold">
-              Recent Leads
-            </h2>
-          </div>
-
-          <table className="w-full">
-            <thead className="bg-slate-100">
-              <tr>
-                <th className="px-5 py-3 text-left">
-                  Lead ID
-                </th>
-
-                <th className="px-5 py-3 text-left">
-                  Customer
-                </th>
-
-                <th className="px-5 py-3 text-left">
-                  Assigned Agent
-                </th>
-
-                <th className="px-5 py-3 text-left">
-                  Status
-                </th>
-
-                <th className="px-5 py-3 text-left">
-                  Created
-                </th>
-
-                <th className="px-5 py-3 text-center">
-                  View
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {stats.recentLeads.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="border-t hover:bg-slate-50"
-                >
-                  <td className="px-5 py-4 font-medium">
-                    {lead.lead_id}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    {lead.customer_name}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    {lead.agent
-                      ? `${lead.agent.employee_id} • ${lead.agent.full_name}`
-                      : "Unassigned"}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    {lead.status}
-                  </td>
-
-                  <td className="px-5 py-4">
-                    {lead.created_at
-                      ? new Date(
-                          lead.created_at
-                        ).toLocaleDateString("en-AU")
-                      : "-"}
-                  </td>
-
-                  <td className="px-5 py-4 text-center">
-                    <Link
-                      href={`/leads/${lead.id}`}
-                      className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </MainLayout>
   );

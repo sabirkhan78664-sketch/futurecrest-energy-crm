@@ -1,79 +1,16 @@
-import { supabase } from "./supabase";
+import { createSupabaseServerClient } from "./supabase-server";
 
-export async function getMessages(
-  conversationId: number
-) {
+export async function getInboxMessages(profile: any) {
+  const supabase = await createSupabaseServerClient();
+
   const { data, error } = await supabase
-    .from("messages")
-    .select(`
-      *,
-      sender:profiles(
-        id,
-        employee_id,
-        full_name
-      )
-    `)
-    .eq("conversation_id", conversationId)
-    .order("created_at", {
-      ascending: true,
-    });
+    .from("crm_message_recipients")
+    .select("*");
 
   if (error) {
-    console.error(error);
-    return [];
+    console.log("Error object:", JSON.stringify(error, null, 2));
+    throw error;
   }
 
   return data ?? [];
-}
-
-export async function sendMessage(
-  conversationId: number,
-  senderId: string,
-  message: string
-) {
-  const { error } = await supabase
-    .from("messages")
-    .insert([
-      {
-        conversation_id: conversationId,
-        sender_id: senderId,
-        message,
-      },
-    ]);
-
-  if (error) throw error;
-}
-
-export async function markAsRead(
-  conversationId: number,
-  currentUserId: string
-) {
-  const { error } = await supabase
-    .from("messages")
-    .update({
-      is_read: true,
-    })
-    .eq("conversation_id", conversationId)
-    .neq("sender_id", currentUserId);
-
-  if (error) {
-    console.error(error);
-  }
-}
-export async function getUnreadCount(userId: string) {
-  const { count, error } = await supabase
-    .from("messages")
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-    .eq("is_read", false)
-    .neq("sender_id", userId);
-
-  if (error) {
-    console.error(error);
-    return 0;
-  }
-
-  return count ?? 0;
 }

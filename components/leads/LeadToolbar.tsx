@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { RefreshCw, Plus } from "lucide-react";
+import { RefreshCw, Plus, Download } from "lucide-react";
 
 interface Props {
   search: string;
@@ -45,6 +45,13 @@ export default function LeadToolbar({
     setCampaign("");
   }
 
+  const exportParams = new URLSearchParams();
+  if (campaign) exportParams.set("campaign", campaign);
+  if (status) exportParams.set("status", status);
+  const exportHref = `/api/leads/export${
+    exportParams.toString() ? `?${exportParams.toString()}` : ""
+  }`;
+
   return (
     <div className="mb-6 rounded-xl border bg-white p-5 shadow">
 
@@ -63,20 +70,10 @@ export default function LeadToolbar({
           onChange={(e) => setStatus(e.target.value)}
         >
           <option value="">All Status</option>
-          <option>New</option>
-          <option>Attempt 1</option>
-          <option>Attempt 2</option>
           <option>Callback</option>
-          <option>Interested</option>
-          <option>Documents Pending</option>
-          <option>Verification</option>
           <option>Sale</option>
-          <option>No Answer</option>
-          <option>Wrong Number</option>
-          <option>DNCR</option>
           <option>Rejected</option>
           <option>Lost</option>
-          <option>Duplicate</option>
         </select>
 
         <select
@@ -138,6 +135,15 @@ export default function LeadToolbar({
             <RefreshCw size={16} />
             Refresh
           </button>
+
+          <a
+            href={exportHref}
+            download
+            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <Download size={16} />
+            Export CSV
+          </a>
 
           <Link
             href="/leads/new"

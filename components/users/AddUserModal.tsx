@@ -21,7 +21,7 @@ export default function AddUserModal() {
   async function createUser() {
     setLoading(true);
 
-    const res = await fetch("/api/users/create", {
+    const res = await fetch("/api/users", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -126,8 +126,8 @@ router.refresh();
           >
             <option>Agent</option>
             <option>Closer</option>
-            <option>Supervisor</option>
             <option>Admin</option>
+            <option>Channel Partner</option>
           </select>
 
           <input

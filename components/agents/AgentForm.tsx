@@ -128,8 +128,8 @@ export default function AgentForm({ agent }: Props) {
           >
             <option>Agent</option>
             <option>Closer</option>
-            <option>Supervisor</option>
             <option>Admin</option>
+            <option>Channel Partner</option>
           </select>
         </div>
 

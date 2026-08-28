@@ -1,8 +1,11 @@
 import MainLayout from "@/components/layout/MainLayout";
+import { requireRole } from "@/lib/auth";
 import Link from "next/link";
 import { getClosers } from "@/lib/closers";
 
 export default async function ClosersPage() {
+  await requireRole(["Admin", "Super Admin"]);
+
   const closers = await getClosers();
 
   return (

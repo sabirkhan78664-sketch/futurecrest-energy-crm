@@ -1,60 +1,48 @@
-import { supabase } from "./supabase";
+import { createSupabaseServerClient } from "./supabase-server";
 
+// ==========================
+// USER MANAGEMENT
+// ==========================
 export async function getUsers() {
+  const supabase = await createSupabaseServerClient();
+
   const { data, error } = await supabase
     .from("profiles")
-    .select("*");
-
-  console.log("USERS:", data);
-  console.log("ERROR:", error);
+    .select("*")
+    .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
+    console.error("getUsers:", error);
     return [];
   }
 
   return data ?? [];
 }
 
-export async function updateUserRole(
-  id: string,
-  role: string
-) {
-  const { error } = await supabase
+// ==========================
+// MESSAGE RECIPIENTS
+// ==========================
+export async function getMessageUsers() {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
     .from("profiles")
-    .update({
+    .select(`
+      id,
+      employee_id,
+      full_name,
       role,
-    })
-    .eq("id", id);
-
-  if (error) throw error;
-
-  return true;
-}
-
-export async function updateUserStatus(
-  id: string,
-  status: string
-) {
-  const { error } = await supabase
-    .from("profiles")
-    .update({
       status,
-    })
-    .eq("id", id);
+      can_receive_messages
+    `)
+    .eq("status", "Active")
+    .eq("can_receive_messages", true)
+    .order("full_name");
 
-  if (error) throw error;
+  if (error) {
+    console.error("getMessageUsers:", error);
+    return [];
+  }
 
-  return true;
-}
-
-export async function deleteUser(id: string) {
-  const { error } = await supabase
-    .from("profiles")
-    .delete()
-    .eq("id", id);
-
-  if (error) throw error;
-
-  return true;
+  return data ?? [];
 }

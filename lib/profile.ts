@@ -3,8 +3,10 @@ import { supabase } from "./supabase";
 export interface Profile {
   id: string;
   email: string;
+  employee_id: string;
+  username: string;
   full_name: string;
-  role: "Admin" | "Supervisor" | "Agent" | "Closer";
+  role: "Admin" | "Super Admin" | "Agent" | "Closer" | "QA" | "Channel Partner";
   status: "Active" | "Inactive";
 }
 
@@ -49,7 +51,7 @@ export async function getAllProfiles() {
 
 export async function updateUserRole(
   id: string,
-  role: "Admin" | "Supervisor" | "Agent" | "Closer"
+  role: "Admin" | "Super Admin" | "Agent" | "Closer" | "QA" | "Channel Partner"
 ) {
   const { error } = await supabase
     .from("profiles")

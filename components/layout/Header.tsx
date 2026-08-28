@@ -1,32 +1,67 @@
 "use client";
 
-import { Bell, Search, LogOut } from "lucide-react";
+import { LogOut, Bell, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-export default function Header() {
+interface HeaderProps {
+  profile: {
+    id: string;
+    employee_id: string;
+    full_name: string;
+    role: string;
+  };
+}
+
+export default function Header({ profile }: HeaderProps) {
   const router = useRouter();
 
   async function logout() {
-    const confirmLogout = confirm("Are you sure you want to logout?");
+  if (!confirm("Are you sure you want to logout?")) return;
 
-    if (!confirmLogout) return;
+  try {
+    // Sign out from Supabase browser client
+    const { error } = await supabase.auth.signOut();
 
-    await supabase.auth.signOut();
+    if (error) throw error;
 
-    router.push("/login");
+    // Clear server cookies
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    // Force a full page reload
+    window.location.replace("/login");
+  } catch (err) {
+    console.error("Logout failed:", err);
+    alert("Logout failed.");
   }
+}
+
+  const initials =
+    profile.full_name
+      ?.split(" ")
+      .map((name) => name[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase() || "U";
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">
-      <h1 className="text-2xl font-bold text-slate-800">
-        Dashboard
-      </h1>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">
+          Dashboard
+        </h1>
 
-      <div className="flex items-center gap-4">
+        <p className="text-sm text-slate-500">
+          Welcome {profile.full_name}
+        </p>
+      </div>
 
+      <div className="flex items-center gap-5">
         <div className="flex items-center rounded-lg border px-3 py-2">
           <Search size={18} />
+
           <input
             className="ml-2 outline-none"
             placeholder="Search..."
@@ -38,9 +73,22 @@ export default function Header() {
         </button>
 
         <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 font-bold text-white">
+            {initials}
+          </div>
 
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white font-bold">
-            S
+          <div className="hidden md:block">
+            <div className="font-semibold">
+              {profile.full_name}
+            </div>
+
+            <div className="text-xs text-slate-500">
+              {profile.employee_id}
+            </div>
+
+            <div className="mt-1 inline-block rounded bg-blue-100 px-2 py-1 text-xs">
+              {profile.role}
+            </div>
           </div>
 
           <button
@@ -50,9 +98,7 @@ export default function Header() {
             <LogOut size={18} />
             Logout
           </button>
-
         </div>
-
       </div>
     </header>
   );

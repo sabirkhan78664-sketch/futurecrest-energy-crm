@@ -1,8 +1,11 @@
 import MainLayout from "@/components/layout/MainLayout";
+import { requireRole } from "@/lib/auth";
 import LeadForm from "@/components/leads/LeadForm";
 import Link from "next/link";
 
-export default function NewLeadPage() {
+export default async function NewLeadPage() {
+  await requireRole(["Agent", "Admin", "Super Admin"]);
+
   return (
     <MainLayout>
       <div className="max-w-7xl space-y-6">

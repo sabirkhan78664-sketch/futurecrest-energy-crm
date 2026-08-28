@@ -31,13 +31,7 @@ export async function addHistory({
       },
     ]);
 
-  if (error) {
-    console.log("Code:", error.code);
-    console.log("Message:", error.message);
-    console.log("Details:", error.details);
-    console.log("Hint:", error.hint);
-    throw error;
-  }
+  if (error) throw error;
 }
 
 export async function getLeadHistory(leadId: number) {
@@ -45,7 +39,9 @@ export async function getLeadHistory(leadId: number) {
     .from("lead_history")
     .select("*")
     .eq("lead_id", leadId)
-    .order("created_at", { ascending: false });
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (error) {
     console.error(error);

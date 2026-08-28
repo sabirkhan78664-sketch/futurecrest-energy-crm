@@ -1,26 +1,57 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "./supabase-server";
 
-export async function getCurrentProfile() {
+export async function getCurrentUserProfile() {
   const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  console.log("AUTH USER:", user);
-  console.log("AUTH ERROR:", error);
+  if (!user) {
+    return null;
+  }
 
-  if (!user) return null;
-
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  console.log("PROFILE:", profile);
-  console.log("PROFILE ERROR:", profileError);
+  if (error || !profile) {
+    return null;
+  }
 
   return profile;
+}
+
+export async function requireRole(allowedRoles: string[]) {
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (error || !profile) {
+    redirect("/login");
+  }
+
+  if (!allowedRoles.includes(profile.role)) {
+    redirect("/unauthorized");
+  }
+
+  return {
+    user,
+    profile,
+  };
 }

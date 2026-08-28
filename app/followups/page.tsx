@@ -1,14 +1,27 @@
 import MainLayout from "@/components/layout/MainLayout";
-import { supabase } from "@/lib/supabase";
+import { requireRole } from "@/lib/auth";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import { AlertCircle, CalendarClock, Phone, ArrowRight } from "lucide-react";
 
 export default async function FollowupsPage() {
-  // Fetch all leads with a "Callback" status
-  const { data: leads } = await supabase
+  // Follow-ups is in the nav for Agent, Admin, and Super Admin only.
+  const { profile } = await requireRole(["Agent", "Admin", "Super Admin"]);
+
+  const supabase = await createSupabaseServerClient();
+
+  // Fetch leads with a "Callback" status. Agents may only see their own
+  // callback leads — everyone else with access to this page sees all of them.
+  let query = supabase
     .from("leads")
     .select("*")
-    .eq("status", "Callback")
+    .eq("status", "Callback");
+
+  if (profile.role === "Agent") {
+    query = query.eq("assigned_agent", profile.id);
+  }
+
+  const { data: leads } = await query
     .order("callback_date", { ascending: true })
     .order("callback_time", { ascending: true });
 

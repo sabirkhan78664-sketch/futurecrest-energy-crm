@@ -8,7 +8,8 @@ export async function getClosers() {
     .from("profiles")
     .select("*")
     .eq("role", "Closer")
-    .order("employee_id", { ascending: true });
+.eq("status", "Active")
+.order("employee_id", { ascending: true });
 
   if (error) {
     console.error(error);
