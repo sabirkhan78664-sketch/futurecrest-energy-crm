@@ -105,6 +105,8 @@ export async function PUT(
       "Admin",
       "Agent",
       "Closer",
+      "QA",
+      "Channel Partner",
     ];
 
     if (

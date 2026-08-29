@@ -243,6 +243,14 @@ export default function EditUserModal({
               <option value="Closer">
                 Closer
               </option>
+
+              <option value="QA">
+                QA
+              </option>
+
+              <option value="Channel Partner">
+                Channel Partner
+              </option>
             </select>
           </div>
 
