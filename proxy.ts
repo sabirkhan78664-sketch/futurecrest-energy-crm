@@ -32,6 +32,8 @@ const PUBLIC_PATHS = [
   "/_next", // Next.js internals
   "/favicon.ico",
   "/public",
+  "/manifest.json", // PWA manifest — fetched unauthenticated by the browser
+  "/sw.js", // service worker — must be reachable with no session too
 ];
 
 const OFFICE_ONLY_ROLES = ["Admin", "Agent", "Closer", "QA"];
