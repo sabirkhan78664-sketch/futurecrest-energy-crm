@@ -282,6 +282,13 @@ export default function Sidebar({
         href: "/leads",
         icon: FileText,
       },
+
+      {
+        name: "Messages",
+        href: "/messages",
+        icon: MessageSquare,
+        badge: unreadCount,
+      },
     ];
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   Check,
@@ -71,13 +71,13 @@ export default function MessagesPage() {
 }
 
 function MessagesContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const targetUserId = searchParams.get("user");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const composerFormRef = useRef<HTMLFormElement>(null);
 
   const { onlineUserIds } = usePresence();
 
@@ -156,13 +156,6 @@ function MessagesContent() {
   const isAdmin =
     currentUser?.role === "Admin" ||
     currentUser?.role === "Super Admin";
-
-  // Channel Partners have no Messages access.
-  useEffect(() => {
-    if (currentUser?.role === "Channel Partner") {
-      router.replace("/unauthorized");
-    }
-  }, [currentUser?.role, router]);
 
   const activeMode = selectedGroup
     ? "group"
@@ -1217,6 +1210,12 @@ function MessagesContent() {
           "";
       }
 
+      // autoResizeComposer sets an inline height as the user types; clear
+      // it so the textarea collapses back to one line after sending.
+      if (messageInputRef.current) {
+        messageInputRef.current.style.height = "auto";
+      }
+
       /*
        * The sender should always land on their own new message,
        * even if they had scrolled up to read history.
@@ -1456,7 +1455,7 @@ function MessagesContent() {
    */
 
   const handleMessageChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
     const value = e.target.value;
 
@@ -1481,6 +1480,28 @@ function MessagesContent() {
       setShowMentionDropdown(false);
       setMentionQuery("");
     }
+  };
+
+  // Enter sends the message; Shift+Enter inserts a newline (the browser
+  // default for a textarea, so it just needs to not be intercepted).
+  const handleComposerKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      composerFormRef.current?.requestSubmit();
+    }
+  };
+
+  // Textareas don't grow on their own — keep it at one line until the
+  // message wraps, then grow up to a cap so a long message doesn't push
+  // the rest of the composer off-screen.
+  const autoResizeComposer = (
+    e: React.FormEvent<HTMLTextAreaElement>
+  ) => {
+    const el = e.currentTarget;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
   const selectMention = (u: Profile) => {
@@ -2477,8 +2498,9 @@ function MessagesContent() {
             {/* COMPOSER */}
 
             <form
+              ref={composerFormRef}
               onSubmit={sendMessage}
-              className="flex shrink-0 items-center gap-3 border-t bg-white p-3"
+              className="flex shrink-0 items-end gap-3 border-t bg-white p-3"
             >
 
               <input
@@ -2513,18 +2535,25 @@ function MessagesContent() {
 
               <div className="relative flex-1">
 
-                <input
+                <textarea
                   ref={messageInputRef}
                   value={newMessage}
                   onChange={
                     handleMessageChange
                   }
+                  onKeyDown={
+                    handleComposerKeyDown
+                  }
+                  onInput={
+                    autoResizeComposer
+                  }
+                  rows={1}
                   placeholder={
                     selectedGroup
                       ? "Message group..."
                       : "Type a message..."
                   }
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="max-h-[120px] min-h-12 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 leading-6 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
                 />
 
                 {showMentionDropdown &&
