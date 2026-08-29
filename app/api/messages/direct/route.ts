@@ -3,6 +3,10 @@ import { adminSupabase } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createNotification } from "@/lib/notifications";
 
+// Channel Partners are external — they may only reach the internal team
+// roles that actually handle their leads, never Agents or other Partners.
+const PARTNER_VISIBLE_ROLES = ["Closer", "Admin", "Super Admin", "QA"];
+
 async function getMe() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,6 +35,13 @@ export async function GET(req: NextRequest) {
 
     if (!contact) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
+    if (
+      me.role === "Channel Partner" &&
+      !PARTNER_VISIBLE_ROLES.includes(contact.role)
+    ) {
+      return NextResponse.json({ message: "You cannot message this user." }, { status: 403 });
+    }
+
     const { data: messages, error } = await adminSupabase
       .from("crm_messages")
       .select("*")
@@ -49,11 +60,17 @@ export async function GET(req: NextRequest) {
   // Some existing CRM rows use a different case/format for Active. A
   // case-sensitive .eq("status", "Active") made the New Chat modal show
   // "No users available" even though users existed.
-  const { data: profileRows, error: usersError } = await adminSupabase
+  let profileQuery = adminSupabase
     .from("profiles")
     .select("id, employee_id, full_name, role, status, can_send_messages, can_receive_messages")
     .neq("id", me.id)
     .order("full_name");
+
+  if (me.role === "Channel Partner") {
+    profileQuery = profileQuery.in("role", PARTNER_VISIBLE_ROLES);
+  }
+
+  const { data: profileRows, error: usersError } = await profileQuery;
 
   if (usersError) return NextResponse.json({ message: usersError.message }, { status: 400 });
 
@@ -123,13 +140,19 @@ export async function POST(req: NextRequest) {
 
   const { data: receiver } = await adminSupabase
     .from("profiles")
-    .select("id, can_receive_messages, status")
+    .select("id, role, can_receive_messages, status")
     .eq("id", receiverId)
     .maybeSingle();
 
   if (!receiver) return NextResponse.json({ message: "Receiver not found" }, { status: 404 });
   if (receiver.can_receive_messages === false) {
     return NextResponse.json({ message: "This user is not allowed to receive messages." }, { status: 403 });
+  }
+  if (
+    me.role === "Channel Partner" &&
+    !PARTNER_VISIBLE_ROLES.includes(receiver.role)
+  ) {
+    return NextResponse.json({ message: "You cannot message this user." }, { status: 403 });
   }
 
   const { data, error } = await adminSupabase
