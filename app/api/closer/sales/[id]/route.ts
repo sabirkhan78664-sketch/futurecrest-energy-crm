@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
+import { sendPushToUser } from "@/lib/push";
 
 /*
 |--------------------------------------------------------------------------
@@ -616,6 +617,21 @@ export async function PATCH(
             console.error(
               "QA notification insert error:",
               notificationError
+            );
+          } else {
+            await Promise.all(
+              notifications.map((notification) =>
+                sendPushToUser(notification.user_id, {
+                  title: notification.title,
+                  body: notification.message,
+                  url: `/leads/${notification.reference_id}`,
+                }).catch((pushError) => {
+                  console.error(
+                    "QA push notification error:",
+                    pushError
+                  );
+                })
+              )
             );
           }
         }

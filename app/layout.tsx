@@ -5,6 +5,7 @@ import AuthProvider from "@/components/AuthProvider";
 export const metadata: Metadata = {
   title: "FutureCrest Energy CRM",
   description: "Professional Energy Campaign CRM",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

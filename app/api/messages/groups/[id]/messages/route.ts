@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createNotification } from "@/lib/notifications";
 async function me(){const s=await createSupabaseServerClient();const {data:{user}}=await s.auth.getUser();if(!user)return null;const {data}=await adminSupabase.from("profiles").select("*").eq("id",user.id).single();return data;}
 async function allowed(group_id:string,user_id:string){const {data}=await adminSupabase.from("crm_chat_group_members").select("group_id").eq("group_id",group_id).eq("user_id",user_id).maybeSingle();return !!data;}
 export async function GET(_:NextRequest,{params}:{params:Promise<{id:string}>}) {
@@ -71,5 +72,44 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
     .single();
 
   if(error) return NextResponse.json({message:error.message},{status:400});
+
+  try {
+    const {data: members} = await adminSupabase
+      .from("crm_chat_group_members")
+      .select("user_id")
+      .eq("group_id", id);
+
+    const {data: group} = await adminSupabase
+      .from("crm_chat_groups")
+      .select("name")
+      .eq("id", id)
+      .maybeSingle();
+
+    const recipientIds = (members || [])
+      .map((m: { user_id: string }) => m.user_id)
+      .filter((memberId: string) => memberId !== p.id);
+
+    const preview = text || (body.attachment_url ? "Sent an attachment" : "");
+
+    await Promise.all(
+      recipientIds.map((recipientId: string) =>
+        createNotification({
+          userId: recipientId,
+          title: `New message in ${group?.name || "group chat"}`,
+          message: `${p.full_name || p.employee_id}: ${
+            preview.length > 100 ? `${preview.slice(0, 97)}...` : preview
+          }`,
+          type: "group_message",
+          referenceId: data.id,
+          url: "/messages",
+        }).catch((notificationError) => {
+          console.error("Group message notification error:", notificationError);
+        })
+      )
+    );
+  } catch (notificationError) {
+    console.error("Group message notification error:", notificationError);
+  }
+
   return NextResponse.json({message:data});
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createNotification } from "@/lib/notifications";
 
 async function getMe() {
   const supabase = await createSupabaseServerClient();
@@ -150,6 +151,26 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ message: error.message }, { status: 400 });
+
+  try {
+    const preview = message.trim();
+    await createNotification({
+      userId: receiverId,
+      title: `New message from ${me.full_name || me.employee_id}`,
+      message: preview
+        ? preview.length > 120
+          ? `${preview.slice(0, 117)}...`
+          : preview
+        : "Sent an attachment",
+      type: "direct_message",
+      referenceId: data.id,
+      url: "/messages",
+    });
+  } catch (notificationError) {
+    // Message send must succeed regardless of notification/push delivery.
+    console.error("Direct message notification error:", notificationError);
+  }
+
   return NextResponse.json({ message: data });
 }
 
