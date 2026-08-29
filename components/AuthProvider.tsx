@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 
 // Public routes that must be reachable with no session at all — the
 // partner lead intake form is meant to be filled in by people who have
@@ -88,6 +89,9 @@ export default function AuthProvider({
   const pathname = usePathname();
 
   const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  const isLoginPath = pathname === "/login";
+
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     if (isPublicPath) return;
@@ -98,10 +102,12 @@ export default function AuthProvider({
       } = await supabase.auth.getSession();
 
       if (!session) {
+        setHasSession(false);
         router.push("/login");
         return;
       }
 
+      setHasSession(true);
       void setupPushNotifications();
     }
 
@@ -111,14 +117,24 @@ export default function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
+        setHasSession(false);
         router.push("/login");
-      } else if (event === "SIGNED_IN") {
+        return;
+      }
+
+      setHasSession(true);
+
+      if (event === "SIGNED_IN") {
         void setupPushNotifications();
       }
     });
 
     return () => subscription.unsubscribe();
   }, [router, isPublicPath]);
+
+  // Only ticking once we know there's a real session, and never on /login
+  // or the public partner form — there's no session there to expire.
+  useInactivityLogout(hasSession && !isPublicPath && !isLoginPath);
 
   return <>{children}</>;
 }
