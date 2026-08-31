@@ -669,12 +669,12 @@ export default function LeadForm({
 
     const finalCallbackDate =
       status === "Callback"
-        ? callbackDate
+        ? callbackDate || null
         : null;
 
     const finalCallbackTime =
       status === "Callback"
-        ? callbackTime
+        ? callbackTime || null
         : null;
 
     /* ============================================================
@@ -716,10 +716,10 @@ export default function LeadForm({
 
     const finalDob =
       campaign === "NBN"
-        ? nbnDob
+        ? nbnDob || null
         : campaign === "PHI"
           ? null
-          : dob;
+          : dob || null;
 
     try {
       /* ==========================================================
