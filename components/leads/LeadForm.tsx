@@ -359,6 +359,58 @@ export default function LeadForm({
     currentRole === "Admin" ||
     currentRole === "Super Admin";
 
+  // Mirrors the Agent override rules enforced server-side in
+  // app/api/leads/route.ts — this only decides whether to show the
+  // Override button; the API re-checks regardless.
+  const AGENT_RESUBMITTABLE_STATUSES = [
+    "Not Interested",
+    "Lost",
+  ];
+
+  const AGENT_BLOCKED_STATUSES = [
+    "Internal DNC",
+    "Callback",
+    "No Answer",
+  ];
+
+  const canAgentOverrideDuplicate = (() => {
+    if (
+      currentRole !== "Agent" ||
+      !duplicateLead
+    ) {
+      return false;
+    }
+
+    const existingStatus = String(
+      duplicateLead.status || ""
+    );
+
+    if (
+      AGENT_BLOCKED_STATUSES.includes(
+        existingStatus
+      )
+    ) {
+      return false;
+    }
+
+    if (existingStatus === "Sold") {
+      const existingCampaign = String(
+        duplicateLead.campaign || ""
+      );
+
+      return (
+        ["PHI", "NBN"].includes(campaign) &&
+        campaign !== existingCampaign
+      );
+    }
+
+    return AGENT_RESUBMITTABLE_STATUSES.includes(
+      existingStatus
+    );
+  })();
+
+  const canOverrideDuplicate =
+    isAdmin || canAgentOverrideDuplicate;
 
   /* ============================================================
      LOAD USERS
@@ -656,7 +708,7 @@ export default function LeadForm({
 
     if (
       allowDuplicate &&
-      isAdmin &&
+      canOverrideDuplicate &&
       !reason.trim()
     ) {
       alert(
@@ -2012,8 +2064,8 @@ setDncr={setDncrNumber}
             duplicateLead
           }
 
-          isAdmin={
-            isAdmin
+          canOverride={
+            canOverrideDuplicate
           }
 
           reason={

@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { getMyLeads } from "@/lib/myLeads";
 import TopAgentPerformance from "./TopAgentPerformance";
 import PartnerLinkCard from "./PartnerLinkCard";
+import StateClocks from "@/components/dashboard/StateClocks";
 
 function norm(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
@@ -77,7 +78,7 @@ const PERIOD_TABS = [
 
 export default async function PartnerDashboard({
   profile,
-  period = "all",
+  period = "today",
 }: {
   profile: any;
   period?: string;
@@ -237,6 +238,8 @@ export default async function PartnerDashboard({
           </div>
         </div>
       </div>
+
+      <StateClocks />
 
       {/* SUBMISSION LINK */}
 

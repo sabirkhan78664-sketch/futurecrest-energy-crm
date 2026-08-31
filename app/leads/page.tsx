@@ -10,6 +10,7 @@ interface LeadsPageProps {
   searchParams: Promise<{
     search?: string;
     status?: string;
+    campaign?: string;
     period?: string;
   }>;
 }
@@ -75,6 +76,11 @@ export default async function LeadsPage({
   const statusFilter =
     typeof params?.status === "string"
       ? params.status.trim()
+      : "";
+
+  const campaignFilter =
+    typeof params?.campaign === "string"
+      ? params.campaign.trim()
       : "";
 
   const periodFilter =
@@ -265,6 +271,25 @@ export default async function LeadsPage({
         // Current Closer workflow uses "Sold"
         // NOT "Sale".
         return leadStatus === wantedStatus;
+      }
+    );
+  }
+
+  // ============================================================
+  // 7b. CAMPAIGN FILTER
+  // ============================================================
+
+  if (campaignFilter) {
+    permittedLeads = permittedLeads.filter(
+      (lead: { campaign?: string | null }) => {
+        const leadCampaign = String(
+          lead.campaign || ""
+        ).toLowerCase();
+
+        return (
+          leadCampaign ===
+          campaignFilter.toLowerCase()
+        );
       }
     );
   }
@@ -533,6 +558,15 @@ export default async function LeadsPage({
                 Filter:
                 <span className="ml-2 rounded-md bg-blue-50 px-2 py-1 font-semibold text-blue-700">
                   {statusFilter}
+                </span>
+              </div>
+            )}
+
+            {campaignFilter && (
+              <div className="mt-2 text-sm text-slate-500">
+                Campaign:
+                <span className="ml-2 rounded-md bg-purple-50 px-2 py-1 font-semibold text-purple-700">
+                  {campaignFilter}
                 </span>
               </div>
             )}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminSupabase } from "@/lib/admin";
+import StateClocks from "@/components/dashboard/StateClocks";
 import {
   ClipboardCheck,
   ListChecks,
@@ -38,7 +39,7 @@ function getPeriodStart(period: string): string | null {
 }
 
 export default async function QADashboard({
-  period = "all",
+  period = "today",
 }: {
   period?: string;
 }) {
@@ -136,6 +137,8 @@ export default async function QADashboard({
 
   return (
     <div className="space-y-5">
+      <StateClocks />
+
       <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm w-fit">
         {PERIOD_TABS.map((tab) => (
           <Link

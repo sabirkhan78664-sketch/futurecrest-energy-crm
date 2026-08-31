@@ -16,7 +16,7 @@ interface DashboardPageProps {
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps) {
-  const { period = "all" } = await searchParams;
+  const { period = "today" } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
 

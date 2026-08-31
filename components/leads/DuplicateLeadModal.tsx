@@ -3,7 +3,10 @@
 interface DuplicateLeadModalProps {
   open: boolean;
   lead: any;
-  isAdmin: boolean;
+  // Whether the API's rules would actually accept an override from this
+  // user for this specific duplicate — server-side stays the source of
+  // truth regardless of what this shows.
+  canOverride: boolean;
   reason: string;
   setReason: (value: string) => void;
   onClose: () => void;
@@ -13,7 +16,7 @@ interface DuplicateLeadModalProps {
 export default function DuplicateLeadModal({
   open,
   lead,
-  isAdmin,
+  canOverride,
   reason,
   setReason,
   onClose,
@@ -54,7 +57,13 @@ export default function DuplicateLeadModal({
 
         </div>
 
-        {isAdmin && (
+        {!canOverride && (
+          <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            This lead cannot be resubmitted right now.
+          </p>
+        )}
+
+        {canOverride && (
           <div className="mt-6">
             <label className="block mb-2 font-medium">
               Reason for Override
@@ -78,7 +87,7 @@ export default function DuplicateLeadModal({
             Close
           </button>
 
-          {isAdmin && (
+          {canOverride && (
             <button
               onClick={onOverride}
               className="px-5 py-2 bg-red-600 text-white rounded-lg"

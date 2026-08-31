@@ -204,25 +204,99 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================================
-    // ADMIN / SUPER ADMIN DUPLICATE OVERRIDE
+    // DUPLICATE OVERRIDE
+    //
+    // Admin / Super Admin can override any duplicate, always.
+    //
+    // Agent gets status-aware rules instead of a flat rejection:
+    //   - Not Interested / Lost  -> allowed (resubmittable)
+    //   - Internal DNC / Callback / No Answer -> blocked
+    //   - Sold -> allowed only when resubmitting for a different
+    //     PHI or NBN campaign than the existing sold lead
+    //   - Anything else (New, Attempt 1/2, Documents Pending,
+    //     Verification, Wrong Number, DNCR, Duplicate) -> blocked,
+    //     since the lead is still actively in progress
+    //
+    // Every other role keeps the original flat rejection.
     // ============================================================
 
     if (
       duplicateLead.length > 0 &&
       body.allowDuplicate
     ) {
-      if (
-        verifiedRole !== "Admin" &&
-        verifiedRole !== "Super Admin"
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Only Admin or Super Admin can create duplicate leads.",
-          },
-          { status: 403 }
+      const isAdminOverride =
+        verifiedRole === "Admin" ||
+        verifiedRole === "Super Admin";
+
+      if (!isAdminOverride) {
+        if (verifiedRole !== "Agent") {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Only Admin or Super Admin can create duplicate leads.",
+            },
+            { status: 403 }
+          );
+        }
+
+        const existingStatus = String(
+          duplicateLead[0].status || ""
         );
+
+        const RESUBMITTABLE_STATUSES = [
+          "Not Interested",
+          "Lost",
+        ];
+
+        const BLOCKED_STATUSES = [
+          "Internal DNC",
+          "Callback",
+          "No Answer",
+        ];
+
+        if (BLOCKED_STATUSES.includes(existingStatus)) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `This lead cannot be resubmitted while it's marked as ${existingStatus}.`,
+            },
+            { status: 403 }
+          );
+        }
+
+        if (existingStatus === "Sold") {
+          const existingCampaign = String(
+            duplicateLead[0].campaign || ""
+          );
+
+          const isDifferentPhiOrNbn =
+            ["PHI", "NBN"].includes(campaign) &&
+            campaign !== existingCampaign;
+
+          if (!isDifferentPhiOrNbn) {
+            return NextResponse.json(
+              {
+                success: false,
+                message:
+                  "This lead is already sold. It can only be resubmitted for a different PHI or NBN campaign.",
+              },
+              { status: 403 }
+            );
+          }
+        } else if (
+          !RESUBMITTABLE_STATUSES.includes(existingStatus)
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `This lead cannot be resubmitted while it's marked as ${
+                existingStatus || "in progress"
+              }.`,
+            },
+            { status: 403 }
+          );
+        }
       }
 
       if (

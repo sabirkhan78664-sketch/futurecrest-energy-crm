@@ -39,6 +39,9 @@ export default function HeaderNav({
   const [showNotifications, setShowNotifications] = useState(false);
 
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
+  const [latestUnreadSenderId, setLatestUnreadSenderId] = useState<
+    string | null
+  >(null);
   const [pendingApprovalCount, setPendingApprovalCount] =
     useState<number>(pendingApproval || 0);
 
@@ -71,17 +74,22 @@ export default function HeaderNav({
   async function loadUnreadCount() {
     if (!profile?.id) {
       setUnreadMsgCount(0);
+      setLatestUnreadSenderId(null);
       return;
     }
 
-    const { count, error } = await supabase
+    // Fetching sender_id (not just a head-count) so a notification click
+    // can open the actual conversation — most recent unread first, since
+    // count:"exact" still reports the true total regardless of limit.
+    const { data, count, error } = await supabase
       .from("crm_messages")
-      .select("id", {
+      .select("sender_id", {
         count: "exact",
-        head: true,
       })
       .eq("receiver_id", profile.id)
-      .eq("is_read", false);
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(1);
 
     if (error) {
       console.error(
@@ -92,6 +100,7 @@ export default function HeaderNav({
     }
 
     setUnreadMsgCount(count ?? 0);
+    setLatestUnreadSenderId(data?.[0]?.sender_id ?? null);
   }
 
   useEffect(() => {
@@ -524,7 +533,11 @@ export default function HeaderNav({
     setShowNotifications(false);
     setShowProfileMenu(false);
 
-    router.push("/messages");
+    router.push(
+      latestUnreadSenderId
+        ? `/messages?user=${latestUnreadSenderId}`
+        : "/messages"
+    );
   }
 
   /* ============================================================

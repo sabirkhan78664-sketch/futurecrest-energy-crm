@@ -42,6 +42,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: "You cannot message this user." }, { status: 403 });
     }
 
+    // Last 50 messages only — this was loading the entire conversation
+    // history on every open and every 3s poll. Fetched newest-first so
+    // LIMIT caps at the most recent messages, then reversed to chat order.
     const { data: messages, error } = await adminSupabase
       .from("crm_messages")
       .select("*")
@@ -49,11 +52,12 @@ export async function GET(req: NextRequest) {
       .or(
         `and(sender_id.eq.${me.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${me.id})`
       )
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (error) return NextResponse.json({ message: error.message }, { status: 400 });
 
-    return NextResponse.json({ contact, messages: messages || [] });
+    return NextResponse.json({ contact, messages: (messages || []).reverse() });
   }
 
   // Load the complete profile list first and normalize status in code.

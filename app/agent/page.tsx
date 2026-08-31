@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { getAgents } from "@/lib/agents";
 import PartnerDashboard from "@/components/closers/dashboard/PartnerDashboard";
 import LeadsRealtimeRefresher from "@/components/leads/LeadsRealtimeRefresher";
+import StateClocks from "@/components/dashboard/StateClocks";
 import Link from "next/link";
 
 function pct(value: number, total: number) {
@@ -26,7 +27,7 @@ export default async function AgentsListPage({ searchParams }: Props) {
   const { profile } = await requireRole(["Agent", "Channel Partner", "Admin", "Super Admin"]);
 
   if (profile.role === "Channel Partner") {
-    const { period = "all" } = await searchParams;
+    const { period = "today" } = await searchParams;
 
     return (
       <MainLayout>
@@ -98,6 +99,8 @@ export default async function AgentsListPage({ searchParams }: Props) {
               </div>
             </div>
           </div>
+
+          <StateClocks />
 
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {cards.map(card => {

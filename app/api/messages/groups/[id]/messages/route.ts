@@ -17,26 +17,38 @@ export async function GET(_:NextRequest,{params}:{params:Promise<{id:string}>}) 
 
   const memberIds = (members || []).map((m:any) => m.user_id);
 
+  // Last 50 messages only — this was loading a group's entire history on
+  // every open and every 3s poll. Fetched newest-first so LIMIT actually
+  // caps at the most recent messages, then reversed back to chat order.
   const {data,error} = await adminSupabase
     .from("crm_messages")
     .select("*")
     .eq("group_id",id)
-    .order("created_at",{ascending:true});
+    .order("created_at",{ascending:false})
+    .limit(50);
 
   if(error) return NextResponse.json({message:error.message},{status:400});
 
-  const rows = data || [];
-  // Opening a group marks messages from other members as read by this user.
-  for (const row of rows) {
-    if (row.sender_id === p.id) continue;
+  const rows = (data || []).reverse();
+
+  // Opening a group marks messages from other members as read by this
+  // user. Was a sequential await-per-row loop (N+1) over the entire
+  // history; now runs in parallel and only over the capped page above.
+  const rowsToMark = rows.filter((row) => {
+    if (row.sender_id === p.id) return false;
     const current = Array.isArray(row.read_by) ? row.read_by : [];
-    if (!current.includes(p.id)) {
-      await adminSupabase
-        .from("crm_messages")
-        .update({ read_by: [...current, p.id] })
-        .eq("id", row.id);
-      row.read_by = [...current, p.id];
-    }
+    return !current.includes(p.id);
+  });
+
+  if (rowsToMark.length) {
+    await Promise.all(
+      rowsToMark.map(async (row) => {
+        const current = Array.isArray(row.read_by) ? row.read_by : [];
+        const updated = [...current, p.id];
+        row.read_by = updated;
+        await adminSupabase.from("crm_messages").update({ read_by: updated }).eq("id", row.id);
+      })
+    );
   }
 
   return NextResponse.json({messages:rows, member_ids:memberIds});

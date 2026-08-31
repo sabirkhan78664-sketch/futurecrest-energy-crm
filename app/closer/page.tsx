@@ -1,5 +1,6 @@
 import CloserSalesBoard from "@/components/closers/dashboard/CloserSalesBoard";
 import MainLayout from "@/components/layout/MainLayout";
+import StateClocks from "@/components/dashboard/StateClocks";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -35,6 +36,8 @@ export default async function CloserDashboard() {
             Ready to finalize some sales today?
           </p>
         </div>
+
+        <StateClocks />
 
         {/* =====================================================
             TODAY'S SALES BOARD

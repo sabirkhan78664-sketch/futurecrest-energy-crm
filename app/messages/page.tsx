@@ -486,10 +486,23 @@ function MessagesContent() {
 
       /*
        * SUCCESS
+       *
+       * Every poll tick re-fetches and would otherwise call setMessages
+       * with a brand-new array reference even when nothing changed,
+       * which re-triggers the auto-scroll-to-bottom effect below every
+       * 3 seconds and yanks anyone reading old history back down.
+       * Bail out (return the same reference) when content is identical
+       * so React skips that render entirely.
        */
-      setMessages(
-        json.messages as Message[]
-      );
+      setMessages((previous) => {
+        const next = json.messages as Message[];
+
+        if (JSON.stringify(previous) === JSON.stringify(next)) {
+          return previous;
+        }
+
+        return next;
+      });
 
       setActiveGroupMemberIds(
         selectedGroup && Array.isArray(json.member_ids)
@@ -1893,7 +1906,7 @@ function MessagesContent() {
           CHAT AREA
           ===================================================== */}
 
-      <div className="flex min-w-0 flex-1 flex-col bg-[#efeae2]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#efeae2]">
 
         {/* NO CHAT */}
 

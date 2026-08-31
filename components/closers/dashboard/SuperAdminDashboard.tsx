@@ -1,6 +1,7 @@
 import { getDashboardMetrics } from "@/lib/dashboardMetrics";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
+import StateClocks from "@/components/dashboard/StateClocks";
 
 import {
   Users,
@@ -154,7 +155,7 @@ const PERIOD_TABS: { key: string; label: string }[] = [
 ============================================================ */
 
 export default async function SuperAdminDashboard({
-  period = "all",
+  period = "today",
 }: {
   period?: string;
 }) {
@@ -242,11 +243,13 @@ export default async function SuperAdminDashboard({
 
       </div>
 
+      <StateClocks />
+
       {/* =====================================================
           METRIC CARDS
       ===================================================== */}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
 
         <MetricCard
           label="Leads"
@@ -285,12 +288,21 @@ export default async function SuperAdminDashboard({
         />
 
         <MetricCard
-          label="Customers"
-          value={metrics.totalLeads}
-          hint="One per lead"
-          valueClass="text-violet-600"
-          icon={<Users size={16} className="text-violet-500" />}
-          href={withPeriod("/leads")}
+          label="PHI"
+          value={metrics.phiLeads}
+          hint="PHI campaign leads"
+          valueClass="text-purple-600"
+          icon={<Users size={16} className="text-purple-500" />}
+          href={withPeriod("/leads?campaign=PHI")}
+        />
+
+        <MetricCard
+          label="NBN"
+          value={metrics.nbnLeads}
+          hint="NBN campaign leads"
+          valueClass="text-green-600"
+          icon={<Users size={16} className="text-green-500" />}
+          href={withPeriod("/leads?campaign=NBN")}
         />
 
         <MetricCard
