@@ -118,6 +118,20 @@ function StatusBadge({
         </span>
       );
 
+    case "Not Interested":
+      return (
+        <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+          Not Interested
+        </span>
+      );
+
+    case "Internal DNC":
+      return (
+        <span className="rounded-full bg-red-900 px-3 py-1 text-xs font-semibold text-red-50">
+          Internal DNC
+        </span>
+      );
+
     case "Wrong Number":
       return (
         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">

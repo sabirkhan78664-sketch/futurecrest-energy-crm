@@ -2,6 +2,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import { getAgent } from "@/lib/agents";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import AgentStatusControl from "@/components/agents/AgentStatusControl";
+import DeleteAgentButton from "@/components/agents/DeleteAgentButton";
 
 interface Props {
   params: Promise<{
@@ -53,6 +55,12 @@ export default async function AgentDetailsPage({
             >
               Edit Agent
             </Link>
+
+            <DeleteAgentButton
+              userId={agent.id}
+              agentName={agent.full_name}
+              redirectTo="/agents"
+            />
 
           </div>
 
@@ -135,10 +143,18 @@ export default async function AgentDetailsPage({
               value={agent.role}
             />
 
-            <Info
-              label="Status"
-              value={agent.status}
-            />
+            <div>
+
+              <p className="mb-2 text-sm text-slate-500">
+                Status
+              </p>
+
+              <AgentStatusControl
+                userId={agent.id}
+                status={agent.status ?? "Active"}
+              />
+
+            </div>
 
             <Info
               label="Created"

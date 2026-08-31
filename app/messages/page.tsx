@@ -19,6 +19,7 @@ import {
   Trash2,
   User,
   Users,
+  UserPlus,
   X,
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -115,6 +116,14 @@ function MessagesContent() {
   const [groupName, setGroupName] = useState("");
 
   const [groupMemberIds, setGroupMemberIds] = useState<string[]>([]);
+
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+
+  const [addMemberIds, setAddMemberIds] = useState<string[]>([]);
+
+  const [addMemberSearch, setAddMemberSearch] = useState("");
+
+  const [addingMembers, setAddingMembers] = useState(false);
 
   const [selectedFileName, setSelectedFileName] = useState("");
 
@@ -969,6 +978,75 @@ function MessagesContent() {
       alert(
         "Unable to create group."
       );
+    }
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * ADD GROUP MEMBERS
+   * ---------------------------------------------------------
+   */
+
+  const openAddMemberModal = () => {
+    setAddMemberIds([]);
+    setAddMemberSearch("");
+    setShowAddMemberModal(true);
+  };
+
+  const addGroupMembers = async () => {
+    if (!selectedGroup || !addMemberIds.length) return;
+
+    try {
+      setAddingMembers(true);
+
+      const res = await fetch(
+        `/api/messages/groups/${encodeURIComponent(selectedGroup.id)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            member_ids: addMemberIds,
+          }),
+        }
+      );
+
+      const json = await safeJson(res);
+
+      if (!res.ok) {
+        alert(
+          json.message || "Failed to add participant"
+        );
+        return;
+      }
+
+      setShowAddMemberModal(false);
+      setAddMemberIds([]);
+      setAddMemberSearch("");
+
+      setSelectedGroup((prev) =>
+        prev
+          ? {
+              ...prev,
+              member_count:
+                json.member_count ?? prev.member_count,
+            }
+          : prev
+      );
+
+      await refreshGroups();
+      await fetchActiveMessages();
+    } catch (error) {
+      console.error(
+        "Add group members failed:",
+        error
+      );
+
+      alert("Unable to add participant.");
+    } finally {
+      setAddingMembers(false);
     }
   };
 
@@ -1889,20 +1967,35 @@ function MessagesContent() {
 
               {selectedGroup &&
                 isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      deleteGroup(
-                        selectedGroup.id
-                      )
-                    }
-                    className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
-                    title="Delete Group"
-                  >
-                    <Trash2
-                      size={17}
-                    />
-                  </button>
+                  <div className="flex items-center gap-2">
+
+                    <button
+                      type="button"
+                      onClick={openAddMemberModal}
+                      className="rounded-lg bg-emerald-600 p-2 text-white hover:bg-emerald-700"
+                      title="Add Participant"
+                    >
+                      <UserPlus
+                        size={17}
+                      />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deleteGroup(
+                          selectedGroup.id
+                        )
+                      }
+                      className="rounded-lg bg-red-600 p-2 text-white hover:bg-red-700"
+                      title="Delete Group"
+                    >
+                      <Trash2
+                        size={17}
+                      />
+                    </button>
+
+                  </div>
                 )}
 
             </div>
@@ -2850,6 +2943,171 @@ function MessagesContent() {
                 className="mt-5 w-full rounded-xl bg-emerald-600 py-2.5 font-semibold text-white hover:bg-emerald-700"
               >
                 Create Group
+              </button>
+
+            </div>
+
+          </div>
+        )}
+
+      {/* =====================================================
+          ADD PARTICIPANT MODAL
+          ===================================================== */}
+
+      {showAddMemberModal &&
+        isAdmin &&
+        selectedGroup && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+
+            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+
+              <div className="flex items-center justify-between">
+
+                <h3 className="text-lg font-bold">
+                  Add Participant
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowAddMemberModal(
+                      false
+                    )
+                  }
+                  className="rounded-full p-1 hover:bg-slate-100"
+                >
+                  <X />
+                </button>
+
+              </div>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Adding to{" "}
+                <span className="font-semibold text-slate-700">
+                  {selectedGroup.name}
+                </span>
+              </p>
+
+              <div className="relative mt-4">
+
+                <Search
+                  size={15}
+                  className="absolute left-3 top-2.5 text-slate-400"
+                />
+
+                <input
+                  autoFocus
+                  value={
+                    addMemberSearch
+                  }
+                  onChange={(e) =>
+                    setAddMemberSearch(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Search users..."
+                  className="w-full rounded-xl border py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-400"
+                />
+
+              </div>
+
+              <div className="mt-3 max-h-64 space-y-2 overflow-y-auto rounded-xl border p-3">
+
+                {allUsers
+                  .filter(
+                    (u) =>
+                      !activeGroupMemberIds.includes(
+                        u.id
+                      )
+                  )
+                  .filter((u) =>
+                    `${u.full_name} ${u.employee_id}`
+                      .toLowerCase()
+                      .includes(
+                        addMemberSearch
+                          .trim()
+                          .toLowerCase()
+                      )
+                  )
+                  .map((u) => {
+                    const checked =
+                      addMemberIds.includes(
+                        u.id
+                      );
+
+                    return (
+                      <label
+                        key={u.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-slate-50"
+                      >
+
+                        <input
+                          type="checkbox"
+                          checked={
+                            checked
+                          }
+                          onChange={() =>
+                            setAddMemberIds(
+                              (prev) =>
+                                checked
+                                  ? prev.filter(
+                                      (
+                                        id
+                                      ) =>
+                                        id !==
+                                        u.id
+                                    )
+                                  : [
+                                      ...prev,
+                                      u.id,
+                                    ]
+                            )
+                          }
+                        />
+
+                        <div>
+
+                          <p className="font-medium">
+                            {u.full_name}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            {u.employee_id}
+                          </p>
+
+                        </div>
+
+                      </label>
+                    );
+                  })}
+
+                {allUsers.filter(
+                  (u) =>
+                    !activeGroupMemberIds.includes(
+                      u.id
+                    )
+                ).length === 0 && (
+                  <p className="p-3 text-center text-sm text-slate-400">
+                    Everyone is already in this group.
+                  </p>
+                )}
+
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  addGroupMembers
+                }
+                disabled={
+                  addingMembers ||
+                  !addMemberIds.length
+                }
+                className="mt-5 w-full rounded-xl bg-emerald-600 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {addingMembers
+                  ? "Adding..."
+                  : "Add Selected"}
               </button>
 
             </div>

@@ -18,6 +18,7 @@ import {
   Calendar,
   MessageSquare,
   ShieldCheck,
+  Plus,
 } from "lucide-react";
 
 type MenuItem = {
@@ -309,6 +310,12 @@ export default function Sidebar({
   href: "/sales",
   icon: FileText,
 },
+
+      {
+        name: "New Lead",
+        href: "/leads/new",
+        icon: Plus,
+      },
 
       {
         name: "Messages",

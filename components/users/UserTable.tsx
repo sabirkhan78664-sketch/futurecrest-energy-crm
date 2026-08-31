@@ -37,6 +37,33 @@ export default function UserTable({ users }: UserTableProps) {
     window.location.reload();
   }
 
+  async function handleDelete(user: User) {
+    const confirmed = window.confirm(
+      `Delete ${user.full_name || "this user"}? This permanently removes their account and cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "DELETE",
+      });
+
+      const result = await res.json();
+
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+
+      alert("User deleted successfully.");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong.");
+    }
+  }
+
   async function updateStatus(user: User, status: string) {
     try {
       const res = await fetch("/api/users/status", {
@@ -138,6 +165,13 @@ export default function UserTable({ users }: UserTableProps) {
                         className="rounded-lg bg-orange-500 px-3 py-2 text-sm text-white hover:bg-orange-600"
                       >
                         Reset Password
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(user)}
+                        className="rounded-lg bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700"
+                      >
+                        Delete
                       </button>
 
                       <select

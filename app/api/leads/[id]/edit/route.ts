@@ -13,9 +13,11 @@ export async function PATCH(
       return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
     }
 
-    if (!["Admin", "Super Admin"].includes(profile.role)) {
+    const isAdmin = ["Admin", "Super Admin"].includes(profile.role);
+
+    if (!isAdmin && profile.role !== "Closer") {
       return NextResponse.json(
-        { success: false, message: "Only Admin or Super Admin can edit leads." },
+        { success: false, message: "Only Admin, Super Admin, or the assigned Closer can edit leads." },
         { status: 403 }
       );
     }
@@ -25,6 +27,27 @@ export async function PATCH(
 
     if (!Number.isInteger(leadId)) {
       return NextResponse.json({ success: false, message: "Invalid lead ID." }, { status: 400 });
+    }
+
+    // A Closer may only edit a lead assigned to them — Admin/Super Admin
+    // keep unrestricted access to every lead.
+    if (!isAdmin) {
+      const { data: existingLead, error: fetchError } = await adminSupabase
+        .from("leads")
+        .select("assigned_closer")
+        .eq("id", leadId)
+        .single();
+
+      if (fetchError || !existingLead) {
+        return NextResponse.json({ success: false, message: "Lead not found." }, { status: 404 });
+      }
+
+      if (existingLead.assigned_closer !== profile.id) {
+        return NextResponse.json(
+          { success: false, message: "This lead is not assigned to you." },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();

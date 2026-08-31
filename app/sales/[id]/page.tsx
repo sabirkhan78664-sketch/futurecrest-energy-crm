@@ -8,6 +8,9 @@ import {
   CheckCircle,
   XCircle,
   Phone,
+  PhoneMissed,
+  ThumbsDown,
+  ShieldOff,
   User,
   Loader2,
 } from "lucide-react";
@@ -148,13 +151,22 @@ export default function CloserSalesDetailPage() {
 
       /*
        * Update the lead status as well.
+       *
+       * Kept in sync with the outcome label itself so the same
+       * canonical status strings show up everywhere else in the app
+       * (StatusBadge, filters, exports).
        */
+      const LEAD_STATUS_BY_OUTCOME: Record<string, string> = {
+        Sold: "Sold",
+        "Not Interested": "Not Interested",
+        "No Answer": "No Answer",
+        Callback: "Callback",
+        Lost: "Lost",
+        "Internal DNC": "Internal DNC",
+      };
+
       const leadStatus =
-        outcome === "Sold"
-          ? "Sold"
-          : outcome === "Callback"
-          ? "Call Back"
-          : "Lost";
+        LEAD_STATUS_BY_OUTCOME[outcome] || outcome;
 
       const {
         error: leadUpdateError,
@@ -426,6 +438,52 @@ export default function CloserSalesDetailPage() {
 
             <button
               type="button"
+              onClick={() => setOutcome("Not Interested")}
+              className={`rounded-xl border-2 p-5 text-left transition ${
+                outcome === "Not Interested"
+                  ? "border-slate-500 bg-slate-50"
+                  : "border-slate-200 hover:border-slate-400"
+              }`}
+            >
+              <ThumbsDown
+                className="text-slate-600"
+                size={28}
+              />
+
+              <p className="mt-3 font-bold text-slate-800">
+                Not Interested
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Customer declined the offer.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOutcome("No Answer")}
+              className={`rounded-xl border-2 p-5 text-left transition ${
+                outcome === "No Answer"
+                  ? "border-amber-500 bg-amber-50"
+                  : "border-slate-200 hover:border-amber-400"
+              }`}
+            >
+              <PhoneMissed
+                className="text-amber-600"
+                size={28}
+              />
+
+              <p className="mt-3 font-bold text-slate-800">
+                No Answer
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Customer did not pick up.
+              </p>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setOutcome("Callback")}
               className={`rounded-xl border-2 p-5 text-left transition ${
                 outcome === "Callback"
@@ -467,6 +525,29 @@ export default function CloserSalesDetailPage() {
 
               <p className="mt-1 text-sm text-slate-500">
                 Customer did not proceed.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setOutcome("Internal DNC")}
+              className={`rounded-xl border-2 p-5 text-left transition ${
+                outcome === "Internal DNC"
+                  ? "border-rose-500 bg-rose-50"
+                  : "border-slate-200 hover:border-rose-400"
+              }`}
+            >
+              <ShieldOff
+                className="text-rose-700"
+                size={28}
+              />
+
+              <p className="mt-3 font-bold text-slate-800">
+                Internal DNC
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add to internal do-not-call list.
               </p>
             </button>
           </div>

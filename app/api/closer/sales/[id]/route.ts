@@ -185,13 +185,11 @@ export async function GET(
 |--------------------------------------------------------------------------
 | PATCH
 |--------------------------------------------------------------------------
-| Closer can ONLY process:
+| Closer can ONLY process an outcome:
 |
-| 1. Sold
-| 2. Callback
-| 3. Lost
+| Sold, Not Interested, No Answer, Callback, Lost, Internal DNC
 |
-| General lead editing is NOT allowed.
+| General lead editing goes through /api/leads/[id]/edit instead.
 |--------------------------------------------------------------------------
 */
 
@@ -357,8 +355,11 @@ export async function PATCH(
     if (
       ![
         "Sold",
+        "Not Interested",
+        "No Answer",
         "Callback",
         "Lost",
+        "Internal DNC",
       ].includes(outcome)
     ) {
       return NextResponse.json(

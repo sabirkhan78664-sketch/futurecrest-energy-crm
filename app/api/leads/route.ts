@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     // Only these roles are allowed to create leads at all.
     const allowedCreatorRoles = [
       "Agent",
+      "Closer",
       "Admin",
       "Super Admin",
       "Channel Partner",

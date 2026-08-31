@@ -4,7 +4,7 @@ import LeadForm from "@/components/leads/LeadForm";
 import Link from "next/link";
 
 export default async function NewLeadPage() {
-  await requireRole(["Agent", "Admin", "Super Admin"]);
+  await requireRole(["Agent", "Closer", "Admin", "Super Admin"]);
 
   return (
     <MainLayout>

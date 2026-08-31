@@ -14,6 +14,9 @@ import {
   Calendar,
   CheckCircle,
   PhoneCall,
+  PhoneMissed,
+  ThumbsDown,
+  ShieldOff,
   XCircle,
   Save,
   Loader2,
@@ -92,7 +95,14 @@ interface Lead {
   phi_lt_booking: string | null;
 }
 
-type Outcome = "Sold" | "Callback" | "Lost" | "";
+type Outcome =
+  | "Sold"
+  | "Not Interested"
+  | "No Answer"
+  | "Callback"
+  | "Lost"
+  | "Internal DNC"
+  | "";
 
 export default function CloserProcessLeadPage() {
   const params = useParams();
@@ -105,8 +115,11 @@ export default function CloserProcessLeadPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Closer has no general lead-edit mode. Customer/lead fields are always read-only.
-  const editing = false;
+  // Closer can edit customer/lead fields on leads assigned to them —
+  // enforced server-side by /api/leads/[id]/edit.
+  const editing = true;
+
+  const [savingEdits, setSavingEdits] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -284,12 +297,59 @@ export default function CloserProcessLeadPage() {
     }));
   }
 
+  async function saveLeadEdits() {
+    if (!lead) return;
+
+    try {
+      setSavingEdits(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `/api/leads/${lead.id}/edit`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to save changes."
+        );
+      }
+
+      setLead(data.lead);
+      setForm(createEditableForm(data.lead));
+
+      setSuccess("Lead details saved.");
+    } catch (err) {
+      console.error(
+        "Save lead edits error:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save changes."
+      );
+    } finally {
+      setSavingEdits(false);
+    }
+  }
+
   async function submitOutcome() {
     if (!lead) return;
 
     if (!outcome) {
       alert(
-        "Please select Sold, Callback or Lost."
+        "Please select an outcome."
       );
       return;
     }
@@ -1213,6 +1273,32 @@ export default function CloserProcessLeadPage() {
 
                 </div>
 
+                <div className="mt-6 flex justify-end border-t border-slate-100 pt-5">
+
+                  <button
+                    type="button"
+                    onClick={saveLeadEdits}
+                    disabled={savingEdits}
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {savingEdits ? (
+                      <>
+                        <Loader2
+                          size={18}
+                          className="animate-spin"
+                        />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={18} />
+                        Save Lead Details
+                      </>
+                    )}
+                  </button>
+
+                </div>
+
               </section>
 
               {/* ASSIGNMENT */}
@@ -1330,6 +1416,44 @@ export default function CloserProcessLeadPage() {
 
                   <OutcomeCard
                     selected={
+                      outcome === "Not Interested"
+                    }
+                    onClick={() =>
+                      setOutcome(
+                        "Not Interested"
+                      )
+                    }
+                    icon={
+                      <ThumbsDown
+                        size={28}
+                      />
+                    }
+                    title="Not Interested"
+                    description="Customer declined the offer"
+                    color="gray"
+                  />
+
+                  <OutcomeCard
+                    selected={
+                      outcome === "No Answer"
+                    }
+                    onClick={() =>
+                      setOutcome(
+                        "No Answer"
+                      )
+                    }
+                    icon={
+                      <PhoneMissed
+                        size={28}
+                      />
+                    }
+                    title="No Answer"
+                    description="Customer did not pick up"
+                    color="amber"
+                  />
+
+                  <OutcomeCard
+                    selected={
                       outcome === "Callback"
                     }
                     onClick={() =>
@@ -1362,6 +1486,25 @@ export default function CloserProcessLeadPage() {
                     title="Lost"
                     description="Not interested / Unable"
                     color="red"
+                  />
+
+                  <OutcomeCard
+                    selected={
+                      outcome === "Internal DNC"
+                    }
+                    onClick={() =>
+                      setOutcome(
+                        "Internal DNC"
+                      )
+                    }
+                    icon={
+                      <ShieldOff
+                        size={28}
+                      />
+                    }
+                    title="Internal DNC"
+                    description="Add to internal do-not-call list"
+                    color="rose"
                   />
 
                 </div>
@@ -1637,6 +1780,12 @@ export default function CloserProcessLeadPage() {
                         ? "bg-orange-500 hover:bg-orange-600"
                         : outcome === "Lost"
                         ? "bg-red-600 hover:bg-red-700"
+                        : outcome === "Not Interested"
+                        ? "bg-slate-600 hover:bg-slate-700"
+                        : outcome === "No Answer"
+                        ? "bg-amber-500 hover:bg-amber-600"
+                        : outcome === "Internal DNC"
+                        ? "bg-rose-700 hover:bg-rose-800"
                         : "bg-slate-400"
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
@@ -2008,7 +2157,10 @@ function OutcomeCard({
   color:
     | "green"
     | "orange"
-    | "red";
+    | "red"
+    | "gray"
+    | "amber"
+    | "rose";
 }) {
   const styles = {
     green: {
@@ -2033,6 +2185,30 @@ function OutcomeCard({
       icon: "bg-red-100 text-red-600",
       title: "text-red-700",
       ring: "ring-red-200",
+    },
+
+    gray: {
+      border: "border-slate-300",
+      bg: "bg-slate-50",
+      icon: "bg-slate-200 text-slate-600",
+      title: "text-slate-700",
+      ring: "ring-slate-200",
+    },
+
+    amber: {
+      border: "border-amber-300",
+      bg: "bg-amber-50",
+      icon: "bg-amber-100 text-amber-600",
+      title: "text-amber-700",
+      ring: "ring-amber-200",
+    },
+
+    rose: {
+      border: "border-rose-400",
+      bg: "bg-rose-50",
+      icon: "bg-rose-200 text-rose-800",
+      title: "text-rose-800",
+      ring: "ring-rose-300",
     },
   };
 

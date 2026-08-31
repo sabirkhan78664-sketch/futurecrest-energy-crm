@@ -2,6 +2,8 @@
 import { requireRole } from "@/lib/auth";
 import { getAgents } from "@/lib/agents";
 import Link from "next/link";
+import AgentStatusControl from "@/components/agents/AgentStatusControl";
+import DeleteAgentButton from "@/components/agents/DeleteAgentButton";
 
 export default async function AgentsListPage() {
   // Managing the agent roster is for Admin/Super Admin only.
@@ -30,13 +32,14 @@ export default async function AgentsListPage() {
                 <th className="px-6 py-3 font-medium">Name</th>
                 <th className="px-6 py-3 font-medium">Username</th>
                 <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {agents.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-6 py-8 text-center text-slate-400"
                   >
                     No agents found.
@@ -65,6 +68,19 @@ export default async function AgentsListPage() {
                   </td>
                   <td className="px-6 py-4">
                     {agent.status ?? "-"}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <AgentStatusControl
+                        userId={agent.id}
+                        status={agent.status ?? "Active"}
+                      />
+
+                      <DeleteAgentButton
+                        userId={agent.id}
+                        agentName={agent.full_name}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -9,6 +9,7 @@ import {
   CheckCircle,
   ClipboardList,
   ArrowRight,
+  Plus,
 } from "lucide-react";
 
 export default async function CloserDashboard() {
@@ -54,7 +55,32 @@ export default async function CloserDashboard() {
             Quick Actions
           </h2>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-3">
+
+            {/* NEW LEAD */}
+            <Link
+              href="/leads/new"
+              className="group flex items-center gap-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-blue-500 hover:shadow-md"
+            >
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 transition group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white">
+                <Plus size={32} />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  New Lead
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Submit a new lead.
+                </p>
+              </div>
+
+              <ArrowRight
+                className="ml-auto text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                size={22}
+              />
+            </Link>
 
             {/* ASSIGNED LEADS */}
             <Link
