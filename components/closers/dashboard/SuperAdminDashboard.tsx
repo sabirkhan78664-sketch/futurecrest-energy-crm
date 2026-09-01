@@ -34,7 +34,11 @@ function statusBadgeClass(status: string | null) {
     .toLowerCase();
 
   if (normalized === "sold") return "bg-emerald-100 text-emerald-700";
-  if (normalized === "callback") return "bg-blue-100 text-blue-700";
+  if (normalized === "follow-up") return "bg-blue-100 text-blue-700";
+  if (normalized === "interested") return "bg-teal-100 text-teal-700";
+  if (normalized === "processing") return "bg-cyan-100 text-cyan-700";
+  if (normalized === "no answer") return "bg-slate-100 text-slate-700";
+  if (normalized === "internal dnc") return "bg-red-900 text-red-50";
   if (normalized === "lost" || normalized === "rejected")
     return "bg-red-100 text-red-700";
   if (normalized === "assigned") return "bg-purple-100 text-purple-700";
@@ -183,6 +187,7 @@ export default async function SuperAdminDashboard({
       created_at,
       campaign,
       cl_id,
+      channel_name,
       assigned_closer,
       agent:profiles!leads_assigned_agent_fkey(
         full_name,
@@ -277,7 +282,7 @@ export default async function SuperAdminDashboard({
           METRIC CARDS
       ===================================================== */}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 
         <MetricCard
           label="Leads"
@@ -307,21 +312,12 @@ export default async function SuperAdminDashboard({
         />
 
         <MetricCard
-          label="PHI"
-          value={metrics.phiLeads}
-          hint="PHI campaign leads"
+          label="NBN + PHI"
+          value={metrics.nbnLeads + metrics.phiLeads}
+          hint="NBN and PHI campaign leads"
           valueClass="text-purple-600"
           icon={<Users size={16} className="text-purple-500" />}
-          href={withPeriod("/leads?campaign=PHI")}
-        />
-
-        <MetricCard
-          label="NBN"
-          value={metrics.nbnLeads}
-          hint="NBN campaign leads"
-          valueClass="text-green-600"
-          icon={<Users size={16} className="text-green-500" />}
-          href={withPeriod("/leads?campaign=NBN")}
+          href={withPeriod("/leads")}
         />
 
         <MetricCard
@@ -568,9 +564,11 @@ export default async function SuperAdminDashboard({
               <tr>
                 <th className="px-4 py-3">Lead ID</th>
                 <th className="px-4 py-3">Client ID</th>
+                <th className="px-4 py-3">Channel Name</th>
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Mobile</th>
                 <th className="px-4 py-3">Campaign</th>
+                <th className="px-4 py-3">Agent</th>
                 <th className="px-4 py-3">Offered Retailer</th>
                 <th className="px-4 py-3">Closer</th>
                 <th className="px-4 py-3">Status</th>
@@ -603,6 +601,10 @@ export default async function SuperAdminDashboard({
                       {lead.cl_id || "—"}
                     </td>
 
+                    <td className="px-4 py-3 text-xs">
+                      {lead.channel_name || "—"}
+                    </td>
+
                     <td className="px-4 py-3 text-sm">
                       {lead.customer_name || "-"}
                     </td>
@@ -619,6 +621,10 @@ export default async function SuperAdminDashboard({
                       >
                         {lead.campaign || "-"}
                       </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-xs">
+                      {lead.agent?.full_name || "—"}
                     </td>
 
                     <td className="px-4 py-3 text-xs">
@@ -651,7 +657,7 @@ export default async function SuperAdminDashboard({
 
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={11}
                     className="py-8 text-center text-slate-400"
                   >
                     No leads available.{" "}

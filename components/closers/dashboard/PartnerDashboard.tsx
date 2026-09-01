@@ -27,7 +27,11 @@ function campaignBadgeClass(campaign: string | null) {
 function statusBadgeClass(status: string | null) {
   const normalized = norm(status);
   if (normalized === "sold") return "bg-emerald-100 text-emerald-700";
-  if (normalized === "callback") return "bg-blue-100 text-blue-700";
+  if (normalized === "follow-up") return "bg-blue-100 text-blue-700";
+  if (normalized === "interested") return "bg-teal-100 text-teal-700";
+  if (normalized === "processing") return "bg-cyan-100 text-cyan-700";
+  if (normalized === "no answer") return "bg-slate-100 text-slate-700";
+  if (normalized === "internal dnc") return "bg-red-900 text-red-50";
   if (normalized === "lost" || normalized === "rejected") return "bg-red-100 text-red-700";
   if (normalized === "assigned") return "bg-purple-100 text-purple-700";
   return "bg-amber-100 text-amber-700";

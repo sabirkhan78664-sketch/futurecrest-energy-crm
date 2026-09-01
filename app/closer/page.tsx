@@ -191,9 +191,9 @@ export default async function CloserDashboard() {
                   /
                 </span>
 
-                {/* CALLBACK */}
+                {/* FOLLOW-UP */}
                 <span className="rounded-full bg-orange-100 px-3 py-1 text-orange-700">
-                  Callback
+                  Follow-up
                 </span>
 
                 <span className="text-slate-400">
