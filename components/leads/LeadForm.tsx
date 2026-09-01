@@ -359,23 +359,30 @@ export default function LeadForm({
     currentRole === "Admin" ||
     currentRole === "Super Admin";
 
-  // Mirrors the Agent override rules enforced server-side in
+  // Mirrors the Agent/Closer override rules enforced server-side in
   // app/api/leads/route.ts — this only decides whether to show the
   // Override button; the API re-checks regardless.
-  const AGENT_RESUBMITTABLE_STATUSES = [
+  const RESTRICTED_ROLES_WITH_OVERRIDE = [
+    "Agent",
+    "Closer",
+  ];
+
+  const RESUBMITTABLE_STATUSES = [
     "Not Interested",
     "Lost",
   ];
 
-  const AGENT_BLOCKED_STATUSES = [
+  const BLOCKED_STATUSES = [
     "Internal DNC",
     "Callback",
     "No Answer",
   ];
 
-  const canAgentOverrideDuplicate = (() => {
+  const canRestrictedRoleOverrideDuplicate = (() => {
     if (
-      currentRole !== "Agent" ||
+      !RESTRICTED_ROLES_WITH_OVERRIDE.includes(
+        currentRole
+      ) ||
       !duplicateLead
     ) {
       return false;
@@ -386,7 +393,7 @@ export default function LeadForm({
     );
 
     if (
-      AGENT_BLOCKED_STATUSES.includes(
+      BLOCKED_STATUSES.includes(
         existingStatus
       )
     ) {
@@ -404,13 +411,13 @@ export default function LeadForm({
       );
     }
 
-    return AGENT_RESUBMITTABLE_STATUSES.includes(
+    return RESUBMITTABLE_STATUSES.includes(
       existingStatus
     );
   })();
 
   const canOverrideDuplicate =
-    isAdmin || canAgentOverrideDuplicate;
+    isAdmin || canRestrictedRoleOverrideDuplicate;
 
   /* ============================================================
      SOLD-DUPLICATE CAMPAIGN SWITCH (AGENT)
@@ -2101,8 +2108,10 @@ setDncr={setDncrNumber}
             canOverrideDuplicate
           }
 
-          isAgent={
-            currentRole === "Agent"
+          canSwitchCampaign={
+            RESTRICTED_ROLES_WITH_OVERRIDE.includes(
+              currentRole
+            )
           }
 
           reason={

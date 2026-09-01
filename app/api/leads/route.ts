@@ -208,7 +208,9 @@ export async function POST(req: NextRequest) {
     //
     // Admin / Super Admin can override any duplicate, always.
     //
-    // Agent gets status-aware rules instead of a flat rejection:
+    // Agent and Closer both get status-aware rules instead of a flat
+    // rejection (Closer only reaches this at all because Closers can
+    // now create leads too, same as Agent):
     //   - Not Interested / Lost  -> allowed (resubmittable)
     //   - Internal DNC / Callback / No Answer -> blocked
     //   - Sold -> allowed only when resubmitting for a different
@@ -229,7 +231,10 @@ export async function POST(req: NextRequest) {
         verifiedRole === "Super Admin";
 
       if (!isAdminOverride) {
-        if (verifiedRole !== "Agent") {
+        if (
+          verifiedRole !== "Agent" &&
+          verifiedRole !== "Closer"
+        ) {
           return NextResponse.json(
             {
               success: false,

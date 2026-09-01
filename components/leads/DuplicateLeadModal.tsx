@@ -7,7 +7,10 @@ interface DuplicateLeadModalProps {
   // user for this specific duplicate — server-side stays the source of
   // truth regardless of what this shows.
   canOverride: boolean;
-  isAgent: boolean;
+  // Agent and Closer can both create leads and hit this modal — either
+  // one resubmitting a Sold duplicate gets the campaign-switch path
+  // below instead of a dead end.
+  canSwitchCampaign: boolean;
   reason: string;
   setReason: (value: string) => void;
   onClose: () => void;
@@ -19,7 +22,7 @@ export default function DuplicateLeadModal({
   open,
   lead,
   canOverride,
-  isAgent,
+  canSwitchCampaign,
   reason,
   setReason,
   onClose,
@@ -28,12 +31,12 @@ export default function DuplicateLeadModal({
 }: DuplicateLeadModalProps) {
   if (!open) return null;
 
-  // An Agent hitting a Sold duplicate isn't blocked outright — they can
-  // still resubmit it under a different PHI or NBN campaign. Offer that
-  // path directly instead of a dead-end message.
+  // Hitting a Sold duplicate isn't blocked outright for Agent/Closer —
+  // they can still resubmit it under a different PHI or NBN campaign.
+  // Offer that path directly instead of a dead-end message.
   const showCampaignSwitch =
     !canOverride &&
-    isAgent &&
+    canSwitchCampaign &&
     lead?.status === "Sold";
 
   const existingCampaign = String(lead?.campaign || "");
