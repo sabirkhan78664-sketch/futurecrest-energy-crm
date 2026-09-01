@@ -1413,7 +1413,10 @@ function MessagesContent() {
   const editAnyMessage = async () => {
     if (
       !editingMessage ||
-      !isAdmin
+      !(
+        editingMessage.sender_id ===
+          currentUser?.id || isAdmin
+      )
     ) {
       return;
     }
@@ -2487,6 +2490,28 @@ function MessagesContent() {
 
                             </div>
 
+                            {(isMe || isAdmin) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMessage(
+                                    msg
+                                  );
+
+                                  setEditText(
+                                    msg.message
+                                  );
+                                }}
+                                title="Edit message"
+                              >
+                                <Pencil
+                                  size={
+                                    13
+                                  }
+                                />
+                              </button>
+                            )}
+
                             {isAdmin && (
                               <>
 
@@ -2506,26 +2531,6 @@ function MessagesContent() {
                                   {msg.is_pinned
                                     ? "📍"
                                     : "📌"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingMessage(
-                                      msg
-                                    );
-
-                                    setEditText(
-                                      msg.message
-                                    );
-                                  }}
-                                  title="Edit message"
-                                >
-                                  <Pencil
-                                    size={
-                                      13
-                                    }
-                                  />
                                 </button>
 
                                 <button

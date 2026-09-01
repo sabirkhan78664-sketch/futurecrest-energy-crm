@@ -26,10 +26,23 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
   if(error)return NextResponse.json({message:error.message},{status:400});
   return NextResponse.json({success:true,reactions:updated});
 }
-export async function PATCH(req:NextRequest,{params}:{params:Promise<{id:string}>}){if(!(await admin()))return NextResponse.json({message:"Only Admin can edit messages"},{status:403});const {id}=await params;const body=await req.json();const {error}=await adminSupabase.from("crm_messages").update({
-  message:String(body.message||""),
-  edited_at:new Date().toISOString()
-}).eq("id",id);if(error)return NextResponse.json({message:error.message},{status:400});return NextResponse.json({success:true});}
+export async function PATCH(req:NextRequest,{params}:{params:Promise<{id:string}>}){
+  const p=await me();
+  if(!p)return NextResponse.json({message:"Unauthorized"},{status:401});
+  const {id}=await params;
+  const {data:existing,error:fetchError}=await adminSupabase.from("crm_messages").select("sender_id").eq("id",id).maybeSingle();
+  if(fetchError)return NextResponse.json({message:fetchError.message},{status:400});
+  if(!existing)return NextResponse.json({message:"Message not found"},{status:404});
+  const isAdmin=["Admin","Super Admin"].includes(p.role);
+  if(!isAdmin && existing.sender_id!==p.id)return NextResponse.json({message:"You can only edit your own messages."},{status:403});
+  const body=await req.json();
+  const {error}=await adminSupabase.from("crm_messages").update({
+    message:String(body.message||""),
+    edited_at:new Date().toISOString()
+  }).eq("id",id);
+  if(error)return NextResponse.json({message:error.message},{status:400});
+  return NextResponse.json({success:true});
+}
 export async function PUT(req:NextRequest,{params}:{params:Promise<{id:string}>}) {
   if(!(await admin())) return NextResponse.json({message:"Only Admin can manage messages"},{status:403});
   const {id}=await params;

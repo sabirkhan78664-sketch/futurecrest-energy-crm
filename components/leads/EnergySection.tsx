@@ -40,11 +40,11 @@ export default function EnergySection({
 
           <input
             required
-            inputMode="numeric"
+            inputMode="text"
             maxLength={10}
             value={nmi}
-            onChange={(e) => setNmi(e.target.value.replace(/\D/g, ""))}
-            placeholder="10-digit NMI"
+            onChange={(e) => setNmi(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+            placeholder="10-character NMI"
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
         </div>
