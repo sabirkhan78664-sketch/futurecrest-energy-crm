@@ -8,6 +8,8 @@ import LeadsRealtimeRefresher from "./LeadsRealtimeRefresher";
 interface Lead {
   id: number;
   lead_id: string;
+  cl_id?: string | null;
+  channel_name?: string | null;
   customer_name: string;
   mobile: string;
   nmi: string | null;

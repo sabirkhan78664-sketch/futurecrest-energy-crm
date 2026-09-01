@@ -18,6 +18,8 @@ import TakeLeadButton from "./TakeLeadButton";
 interface Lead {
   id: number;
   lead_id: string;
+  cl_id?: string | null;
+  channel_name?: string | null;
   customer_name: string;
   assigned_agent: string | null;
   assigned_closer: string | null;
@@ -388,6 +390,18 @@ export default function LeadTable({
                 Lead ID
               </th>
 
+              {!isAgent && (
+                <>
+                  <th className="px-5 py-4 text-left">
+                    Client ID
+                  </th>
+
+                  <th className="px-5 py-4 text-left">
+                    Channel Name
+                  </th>
+                </>
+              )}
+
               <th className="px-5 py-4 text-left">
                 Customer
               </th>
@@ -449,7 +463,7 @@ export default function LeadTable({
             {leads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={13}
                   className="py-12 text-center text-slate-500"
                 >
                   No leads found.
@@ -485,6 +499,22 @@ export default function LeadTable({
 )}
 
                   </td>
+
+                  {/* ==========================================
+                      CLIENT ID / CHANNEL NAME
+                  ========================================== */}
+
+                  {!isAgent && (
+                    <>
+                      <td className="px-5 py-4 text-xs">
+                        {lead.cl_id || "—"}
+                      </td>
+
+                      <td className="px-5 py-4 text-xs">
+                        {lead.channel_name || "—"}
+                      </td>
+                    </>
+                  )}
 
                   {/* ==========================================
                       CUSTOMER
