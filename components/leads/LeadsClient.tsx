@@ -62,9 +62,9 @@ export default function LeadsClient({
         lead.created_by === lead.assigned_agent ? lead.creator : null;
 
       const label =
-        profile?.employee_id ||
         profile?.full_name ||
         profile?.username ||
+        profile?.employee_id ||
         lead.assigned_agent;
 
       nameById.set(lead.assigned_agent, label);
