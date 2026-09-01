@@ -5,6 +5,13 @@ import { getCurrentUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  FileText,
+  CalendarDays,
+  DollarSign,
+  PhoneCall,
+  XCircle,
+} from "lucide-react";
 
 interface LeadsPageProps {
   searchParams: Promise<{
@@ -599,6 +606,7 @@ export default async function LeadsPage({
             title="Total Leads"
             value={totalLeads}
             color="text-blue-600"
+            icon={<FileText size={16} className="text-blue-500" />}
             href="/leads"
           />
 
@@ -606,6 +614,7 @@ export default async function LeadsPage({
             title="Today's Leads"
             value={todayLeads}
             color="text-indigo-600"
+            icon={<CalendarDays size={16} className="text-indigo-500" />}
             href="/leads?period=today"
           />
 
@@ -613,6 +622,7 @@ export default async function LeadsPage({
             title="Sales"
             value={sales}
             color="text-green-600"
+            icon={<DollarSign size={16} className="text-green-500" />}
             href="/leads?status=Sold"
           />
 
@@ -620,6 +630,7 @@ export default async function LeadsPage({
             title="Follow-ups"
             value={followups}
             color="text-yellow-600"
+            icon={<PhoneCall size={16} className="text-yellow-500" />}
             href="/leads?status=Follow-up"
           />
 
@@ -627,6 +638,7 @@ export default async function LeadsPage({
             title="Rejected"
             value={rejected}
             color="text-red-600"
+            icon={<XCircle size={16} className="text-red-500" />}
             href="/leads?status=Rejected"
           />
 
@@ -681,6 +693,7 @@ interface StatCardProps {
   title: string;
   value: number;
   color: string;
+  icon: React.ReactNode;
   href: string;
 }
 
@@ -688,6 +701,7 @@ function StatCard({
   title,
   value,
   color,
+  icon,
   href,
 }: StatCardProps) {
   return (
@@ -695,9 +709,13 @@ function StatCard({
       href={href}
       className="group block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-blue-300 hover:shadow-md"
     >
-      <p className="text-sm font-medium text-slate-500">
-        {title}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-500">
+          {title}
+        </p>
+
+        {icon}
+      </div>
 
       <h2
         className={`mt-3 text-3xl font-bold ${color}`}

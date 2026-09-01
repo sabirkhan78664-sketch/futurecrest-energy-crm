@@ -376,77 +376,77 @@ export default function LeadTable({
     <>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
-        <table className="min-w-full">
+        <table className="min-w-full text-left text-sm text-slate-600">
 
           {/* ==================================================
               HEADER
           ================================================== */}
 
-          <thead className="bg-slate-100">
+          <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase text-slate-400">
 
             <tr>
 
-              <th className="px-5 py-4 text-left">
+              <th className="px-4 py-3 text-left">
                 Lead ID
               </th>
 
               {!isAgent && (
                 <>
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Client ID
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Channel Name
                   </th>
                 </>
               )}
 
-              <th className="px-5 py-4 text-left">
+              <th className="px-4 py-3 text-left">
                 Customer
               </th>
 
-              <th className="px-5 py-4 text-left">
+              <th className="px-4 py-3 text-left">
                 Campaign
               </th>
 
               {!isAgent && (
                 <>
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Agent
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Mobile
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Assigned Closer
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Fuel
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Current Retailer
                   </th>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-4 py-3 text-left">
                     Offered Retailer
                   </th>
                 </>
               )}
 
-              <th className="px-5 py-4 text-center">
+              <th className="px-4 py-3 text-center">
                 Status
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="px-4 py-3 text-center">
                 Created
               </th>
 
-              <th className="px-5 py-4 text-center">
+              <th className="px-4 py-3 text-center">
                 Actions
               </th>
 
@@ -474,14 +474,14 @@ export default function LeadTable({
 
                 <tr
                   key={lead.id}
-                  className="border-t hover:bg-slate-50"
+                  className="border-t border-slate-100 transition hover:bg-slate-50/80"
                 >
 
                   {/* ==========================================
                       LEAD ID
                   ========================================== */}
 
-                  <td className="px-5 py-4 font-medium">
+                  <td className="px-4 py-3 text-xs font-medium">
 
                     {canView ? (
   <Link
@@ -506,11 +506,11 @@ export default function LeadTable({
 
                   {!isAgent && (
                     <>
-                      <td className="px-5 py-4 text-xs">
+                      <td className="px-4 py-3 text-xs">
                         {lead.cl_id || "—"}
                       </td>
 
-                      <td className="px-5 py-4 text-xs">
+                      <td className="px-4 py-3 text-xs">
                         {lead.channel_name || "—"}
                       </td>
                     </>
@@ -520,7 +520,7 @@ export default function LeadTable({
                       CUSTOMER
                   ========================================== */}
 
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-3">
 
                     {canView ? (
   <Link
@@ -543,7 +543,7 @@ export default function LeadTable({
                       CAMPAIGN
                   ========================================== */}
 
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-3">
                     <CampaignBadge
                       campaign={lead.campaign}
                     />
@@ -555,7 +555,7 @@ export default function LeadTable({
 
                   {!isAgent && (
                     <>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs">
 
                         {lead.creator ? (
                           lead.creator.full_name ||
@@ -568,7 +568,7 @@ export default function LeadTable({
                           <>
                             {lead.agent_name}
                             {" "}
-                            <span className="text-gray-400 text-xs">
+                            <span className="text-gray-400">
                               (Partner)
                             </span>
                           </>
@@ -582,13 +582,13 @@ export default function LeadTable({
 
                       {/* MOBILE */}
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs text-slate-500">
                         {lead.mobile}
                       </td>
 
                       {/* ASSIGNED CLOSER */}
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs">
                         {lead.closer ? (
                           lead.closer.full_name ||
                           lead.closer.employee_id ||
@@ -603,19 +603,19 @@ export default function LeadTable({
 
                       {/* FUEL */}
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs">
                         {lead.fuel_type || "-"}
                       </td>
 
                       {/* RETAILER */}
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs">
                         {lead.current_retailer || "-"}
                       </td>
 
                       {/* OFFERED RETAILER */}
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3 text-xs">
                         {lead.offered_retailer || "-"}
                       </td>
                     </>
@@ -625,7 +625,7 @@ export default function LeadTable({
                       STATUS
                   ========================================== */}
 
-                  <td className="px-5 py-4 text-center">
+                  <td className="px-4 py-3 text-center">
 
                     <StatusBadge
                       status={lead.status}
@@ -637,7 +637,7 @@ export default function LeadTable({
                       CREATED DATE
                   ========================================== */}
 
-                  <td className="px-5 py-4 text-center">
+                  <td className="px-4 py-3 text-center text-xs text-slate-400">
 
                     {lead.created_at
                       ? new Intl.DateTimeFormat(
@@ -662,7 +662,7 @@ export default function LeadTable({
                   ========================================== */}
 
                   {canView && (
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
 
                       <div className="flex justify-center gap-2">
 
