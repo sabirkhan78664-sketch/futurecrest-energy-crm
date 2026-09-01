@@ -558,23 +558,12 @@ export default function LeadTable({
                       <td className="px-5 py-4">
 
                         {lead.creator ? (
-                          <>
-                            {lead.creator.employee_id ||
-                              lead.creator.username ||
-                              "Agent"}
-                            {lead.creator.full_name && (
-                              <>
-                                {" • "}
-                                {lead.creator.full_name}
-                              </>
-                            )}
-                          </>
+                          lead.creator.full_name ||
+                          lead.creator.employee_id ||
+                          lead.creator.username ||
+                          "Agent"
                         ) : lead.agent ? (
-                          <>
-                            {lead.agent.employee_id}
-                            {" • "}
-                            {lead.agent.full_name}
-                          </>
+                          lead.agent.full_name
                         ) : lead.agent_name ? (
                           <>
                             {lead.agent_name}
@@ -601,17 +590,10 @@ export default function LeadTable({
 
                       <td className="px-5 py-4">
                         {lead.closer ? (
-                          <>
-                            {lead.closer.employee_id ||
-                              lead.closer.username ||
-                              "Closer"}
-                            {lead.closer.full_name && (
-                              <>
-                                {" • "}
-                                {lead.closer.full_name}
-                              </>
-                            )}
-                          </>
+                          lead.closer.full_name ||
+                          lead.closer.employee_id ||
+                          lead.closer.username ||
+                          "Closer"
                         ) : (
                           <span className="text-gray-400">
                             Unassigned
