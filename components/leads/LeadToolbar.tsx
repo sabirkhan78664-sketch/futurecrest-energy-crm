@@ -19,7 +19,7 @@ interface Props {
   campaign: string;
   setCampaign: (value: string) => void;
 
-  uniqueAgents: string[];
+  uniqueAgents: { id: string; label: string }[];
   uniqueCampaigns: string[];
 }
 
@@ -114,8 +114,8 @@ export default function LeadToolbar({
           <option value="">All Agents</option>
 
           {uniqueAgents.map((item) => (
-            <option key={item} value={item}>
-              {item}
+            <option key={item.id} value={item.id}>
+              {item.label}
             </option>
           ))}
         </select>

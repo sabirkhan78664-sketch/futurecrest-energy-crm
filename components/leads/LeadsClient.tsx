@@ -46,13 +46,34 @@ export default function LeadsClient({
   const [campaign, setCampaign] = useState("");
 
   const uniqueAgents = useMemo(() => {
-    return Array.from(
-      new Set(
-        leads
-          .map((lead) => lead.assigned_agent)
-          .filter(Boolean)
-      )
-    ) as string[];
+    // The filter needs to match on assigned_agent (a profile UUID), but the
+    // dropdown should show a human-readable name rather than the raw UUID —
+    // resolve it from the enriched `creator` profile on the lead that
+    // actually created it (created_by === assigned_agent for Agent-submitted
+    // leads). Falls back to the UUID only if no matching profile was found.
+    const nameById = new Map<string, string>();
+
+    leads.forEach((lead) => {
+      if (!lead.assigned_agent || nameById.has(lead.assigned_agent)) {
+        return;
+      }
+
+      const profile =
+        lead.created_by === lead.assigned_agent ? lead.creator : null;
+
+      const label =
+        profile?.employee_id ||
+        profile?.full_name ||
+        profile?.username ||
+        lead.assigned_agent;
+
+      nameById.set(lead.assigned_agent, label);
+    });
+
+    return Array.from(nameById.entries()).map(([id, label]) => ({
+      id,
+      label,
+    }));
   }, [leads]);
 
   const uniqueCampaigns = useMemo(() => {
