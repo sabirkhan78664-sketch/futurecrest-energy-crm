@@ -836,9 +836,6 @@ export default function MainLayout({
 
           <HeaderNav
             profile={currentProfile}
-            pendingApproval={
-              sidebarStats.pendingApproval
-            }
           />
 
           <main

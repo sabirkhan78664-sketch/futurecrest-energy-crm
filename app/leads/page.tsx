@@ -448,11 +448,11 @@ export default async function LeadsPage({
           .toLowerCase() === "sold"
     ).length;
 
-  const callbacks =
+  const followups =
     allPermittedLeads.filter(
       (lead: any) =>
         String(lead.status || "")
-          .toLowerCase() === "callback"
+          .toLowerCase() === "follow-up"
     ).length;
 
   const rejected =
@@ -498,8 +498,8 @@ export default async function LeadsPage({
   );
 
   console.log(
-    "Callbacks:",
-    callbacks
+    "Follow-ups:",
+    followups
   );
 
   console.log(
@@ -617,10 +617,10 @@ export default async function LeadsPage({
           />
 
           <StatCard
-            title="Callbacks"
-            value={callbacks}
+            title="Follow-ups"
+            value={followups}
             color="text-yellow-600"
-            href="/leads?status=Callback"
+            href="/leads?status=Follow-up"
           />
 
           <StatCard

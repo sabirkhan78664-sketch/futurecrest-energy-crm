@@ -10,12 +10,12 @@ export default async function FollowupsPage() {
 
   const supabase = await createSupabaseServerClient();
 
-  // Fetch leads with a "Callback" status. Agents may only see their own
-  // callback leads — everyone else with access to this page sees all of them.
+  // Fetch leads with a "Follow-up" status. Agents may only see their own
+  // follow-up leads — everyone else with access to this page sees all of them.
   let query = supabase
     .from("leads")
     .select("*")
-    .eq("status", "Callback");
+    .eq("status", "Follow-up");
 
   if (profile.role === "Agent") {
     query = query.eq("assigned_agent", profile.id);
@@ -44,7 +44,7 @@ export default async function FollowupsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Follow-ups Dashboard</h1>
-          <p className="mt-1 text-slate-500">Manage your scheduled callbacks and missed calls</p>
+          <p className="mt-1 text-slate-500">Manage your scheduled follow-ups and missed calls</p>
         </div>
       </div>
 
@@ -109,13 +109,13 @@ export default async function FollowupsPage() {
           <div className="border-b border-blue-100 bg-blue-50/50 p-5 rounded-t-xl flex items-center gap-2">
             <CalendarClock className="text-blue-600" size={20} />
             <h2 className="text-xl font-semibold text-blue-800">
-              Today's Callbacks <span className="ml-2 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">{todayFollowups.length}</span>
+              Today's Follow-ups <span className="ml-2 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">{todayFollowups.length}</span>
             </h2>
           </div>
           
           <div className="p-0">
             {todayFollowups.length === 0 ? (
-              <p className="p-6 text-center text-gray-500">No callbacks scheduled for today.</p>
+              <p className="p-6 text-center text-gray-500">No follow-ups scheduled for today.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-gray-600">

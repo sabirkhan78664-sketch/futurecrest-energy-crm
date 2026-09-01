@@ -21,12 +21,10 @@ interface HeaderNavProps {
     employee_id: string;
     role: string;
   };
-  pendingApproval?: number;
 }
 
 export default function HeaderNav({
   profile,
-  pendingApproval = 0,
 }: HeaderNavProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -42,8 +40,6 @@ export default function HeaderNav({
   const [latestUnreadSenderId, setLatestUnreadSenderId] = useState<
     string | null
   >(null);
-  const [pendingApprovalCount, setPendingApprovalCount] =
-    useState<number>(pendingApproval || 0);
 
   const [qaNotificationCount, setQaNotificationCount] = useState(0);
   const [qaNotifications, setQaNotifications] = useState<
@@ -58,14 +54,6 @@ export default function HeaderNav({
   >([]);
 
   const [loggingOut, setLoggingOut] = useState(false);
-
-  /* ============================================================
-     SYNC PENDING APPROVAL PROP
-  ============================================================ */
-
-  useEffect(() => {
-    setPendingApprovalCount(pendingApproval || 0);
-  }, [pendingApproval]);
 
   /* ============================================================
      LOAD UNREAD MESSAGES
@@ -198,133 +186,6 @@ export default function HeaderNav({
       supabase.removeChannel(channel);
     };
   }, [profile?.id]);
-
-  /* ============================================================
-     LOAD PENDING APPROVALS
-  ============================================================ */
-
-  async function loadPendingApprovals() {
-    if (!profile?.id) {
-      setPendingApprovalCount(0);
-      return;
-    }
-
-    const allowedRoles = [
-      "Admin",
-      "Super Admin",
-    ];
-
-    if (
-      !allowedRoles.includes(
-        profile.role
-      )
-    ) {
-      setPendingApprovalCount(0);
-      return;
-    }
-
-    const { count, error } = await supabase
-      .from("leads")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq(
-        "approval_status",
-        "Pending"
-      );
-
-    if (error) {
-      console.error(
-        "Pending approval count error:",
-        error
-      );
-      return;
-    }
-
-    setPendingApprovalCount(count ?? 0);
-  }
-
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    loadPendingApprovals();
-  }, [
-    profile?.id,
-    profile?.role,
-  ]);
-
-  /* ============================================================
-     PENDING APPROVAL REALTIME
-  ============================================================ */
-
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    const allowedRoles = [
-      "Admin",
-      "Super Admin",
-    ];
-
-    if (
-      !allowedRoles.includes(
-        profile.role
-      )
-    ) {
-      return;
-    }
-
-    const channel = supabase
-      .channel(
-        `header-pending-approvals-${profile.id}`
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "leads",
-        },
-        async () => {
-          await loadPendingApprovals();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "leads",
-        },
-        async () => {
-          await loadPendingApprovals();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "leads",
-        },
-        async () => {
-          await loadPendingApprovals();
-        }
-      )
-      .subscribe((status) => {
-        console.log(
-          "Pending approval realtime:",
-          status
-        );
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [
-    profile?.id,
-    profile?.role,
-  ]);
 
   /* ============================================================
      POST-SALE QA NOTIFICATIONS
@@ -541,19 +402,6 @@ export default function HeaderNav({
   }
 
   /* ============================================================
-     OPEN PENDING APPROVALS
-  ============================================================ */
-
-  function openPendingApprovals() {
-    setShowNotifications(false);
-    setShowProfileMenu(false);
-
-    router.push(
-      "/pending-approvals"
-    );
-  }
-
-  /* ============================================================
      LOGOUT
   ============================================================ */
 
@@ -593,7 +441,6 @@ export default function HeaderNav({
 
   const totalNotifications =
     unreadMsgCount +
-    pendingApprovalCount +
     qaNotificationCount;
 
   /* ============================================================
@@ -704,52 +551,6 @@ export default function HeaderNav({
 
               </div>
 
-              {/* PENDING APPROVAL */}
-
-              {pendingApprovalCount >
-                0 && (
-                <button
-                  type="button"
-                  onClick={
-                    openPendingApprovals
-                  }
-                  className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-4 text-left hover:bg-amber-50"
-                >
-
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-                    <Bell size={18} />
-                  </div>
-
-                  <div className="min-w-0">
-
-                    <p className="text-sm font-semibold text-slate-800">
-                      Pending approvals
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      You have{" "}
-                      <span className="font-semibold text-amber-600">
-                        {
-                          pendingApprovalCount
-                        }
-                      </span>{" "}
-                      lead
-                      {pendingApprovalCount !==
-                      1
-                        ? "s"
-                        : ""}{" "}
-                      waiting for approval.
-                    </p>
-
-                    <p className="mt-2 text-xs font-semibold text-blue-600">
-                      Review pending leads →
-                    </p>
-
-                  </div>
-
-                </button>
-              )}
-
               {/* MESSAGES */}
 
               {unreadMsgCount >
@@ -826,10 +627,8 @@ export default function HeaderNav({
 
               {/* EMPTY */}
 
-              {pendingApprovalCount ===
+              {unreadMsgCount ===
                 0 &&
-                unreadMsgCount ===
-                  0 &&
                 qaNotificationCount ===
                   0 && (
                   <div className="px-4 py-8 text-center">
@@ -1011,45 +810,6 @@ export default function HeaderNav({
                 </span>
 
               </button>
-
-              {/* PENDING APPROVALS */}
-
-              {(profile.role ===
-                "Admin" ||
-                profile.role ===
-                  "Super Admin") &&
-                pendingApprovalCount >
-                  0 && (
-                  <button
-                    type="button"
-                    onClick={
-                      openPendingApprovals
-                    }
-                    className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-amber-50"
-                  >
-
-                    <div className="flex items-center gap-3">
-
-                      <Bell
-                        size={17}
-                        className="text-amber-600"
-                      />
-
-                      <span>
-                        Pending Approvals
-                      </span>
-
-                    </div>
-
-                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {pendingApprovalCount >
-                      99
-                        ? "99+"
-                        : pendingApprovalCount}
-                    </span>
-
-                  </button>
-                )}
 
               {/* LOGOUT */}
 

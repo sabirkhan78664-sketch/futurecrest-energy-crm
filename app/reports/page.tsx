@@ -78,7 +78,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const allLeads = leads || [];
   const totalLeads = allLeads.length;
   const sold = allLeads.filter((l: any) => l.status === "Sold").length;
-  const callbacks = allLeads.filter((l: any) => l.status === "Callback").length;
+  const followups = allLeads.filter((l: any) => l.status === "Follow-up").length;
   const lost = allLeads.filter(
     (l: any) => l.status === "Lost"
   ).length;
@@ -107,9 +107,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <p className="text-sm font-semibold text-slate-500">Sold</p>
               <p className="mt-1 text-3xl font-bold text-green-600">{sold}</p>
             </Link>
-            <Link href="/my-leads?status=callback" className="rounded-xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <p className="text-sm font-semibold text-slate-500">Callback</p>
-              <p className="mt-1 text-3xl font-bold text-amber-600">{callbacks}</p>
+            <Link href="/my-leads?status=follow-up" className="rounded-xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="text-sm font-semibold text-slate-500">Follow-up</p>
+              <p className="mt-1 text-3xl font-bold text-amber-600">{followups}</p>
             </Link>
             <div className="rounded-xl border bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-500">Conversion</p>
@@ -134,9 +134,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 <p className="text-xs font-semibold text-green-700">Sold</p>
                 <p className="mt-1 text-2xl font-bold text-green-800">{sold}</p>
               </Link>
-              <Link href="/my-leads?status=callback" className="rounded-lg bg-amber-50 p-4 transition hover:bg-amber-100">
-                <p className="text-xs font-semibold text-amber-700">Callback</p>
-                <p className="mt-1 text-2xl font-bold text-amber-800">{callbacks}</p>
+              <Link href="/my-leads?status=follow-up" className="rounded-lg bg-amber-50 p-4 transition hover:bg-amber-100">
+                <p className="text-xs font-semibold text-amber-700">Follow-up</p>
+                <p className="mt-1 text-2xl font-bold text-amber-800">{followups}</p>
               </Link>
               <Link href="/my-leads?status=lost" className="rounded-lg bg-red-50 p-4 transition hover:bg-red-100">
                 <p className="text-xs font-semibold text-red-700">Lost</p>

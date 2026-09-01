@@ -27,7 +27,7 @@ export default async function MyLeadsPage({ searchParams }: Props) {
   const dayKey = (v: string) => dateFormatter.format(new Date(v));
   const todayLeads = leads.filter((l: any) => l.created_at && dayKey(l.created_at) === todayKey);
   const sold = leads.filter((l: any) => norm(l.status) === "sold");
-  const callbacks = leads.filter((l: any) => norm(l.status) === "callback");
+  const followups = leads.filter((l: any) => norm(l.status) === "follow-up");
   const rejected = leads.filter(rejectedLead);
 
   let filteredLeads = period === "today" ? todayLeads : [...leads];
@@ -53,7 +53,7 @@ export default async function MyLeadsPage({ searchParams }: Props) {
         <Card title="Total Leads" value={leads.length} href="/my-leads" tone="border-blue-200 bg-white text-blue-700" hint="All your leads" />
         <Card title="Today" value={todayLeads.length} href="/my-leads?period=today" tone="border-indigo-200 bg-indigo-50 text-indigo-700" hint="Created today" />
         <Card title="Sales" value={sold.length} href="/my-leads?status=sold" tone="border-emerald-500 bg-emerald-600 text-white" hint="Sold leads" />
-        <Card title="Call Backs" value={callbacks.length} href="/my-leads?status=callback" tone="border-orange-200 bg-orange-50 text-orange-700" hint="Need a call" />
+        <Card title="Follow-ups" value={followups.length} href="/my-leads?status=follow-up" tone="border-orange-200 bg-orange-50 text-orange-700" hint="Need a call" />
         <Card title="Rejected" value={rejected.length} href="/my-leads?status=rejected" tone="border-red-200 bg-red-50 text-red-700" hint="Rejected / lost" />
       </div>
 
@@ -61,7 +61,7 @@ export default async function MyLeadsPage({ searchParams }: Props) {
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-bold text-slate-900">Find a lead</h2><p className="text-xs text-slate-500">Search by Lead ID or customer name, then filter by status, fuel or form.</p></div><span className="text-xs font-semibold text-slate-500">Showing {filteredLeads.length} of {leads.length}</span></div>
         <form className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]" method="get">
           <input name="search" defaultValue={params.search || ""} placeholder="Search Lead ID, Customer Name..." className="rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-          <select name="status" defaultValue={params.status || ""} className="rounded-lg border border-slate-300 px-4 py-3"><option value="">All Status</option><option value="callback">Callback</option><option value="sold">Sold</option><option value="lost">Lost</option><option value="rejected">Rejected</option></select>
+          <select name="status" defaultValue={params.status || ""} className="rounded-lg border border-slate-300 px-4 py-3"><option value="">All Status</option><option value="follow-up">Follow-up</option><option value="interested">Interested</option><option value="processing">Processing</option><option value="sold">Sold</option><option value="lost">Lost</option><option value="no answer">No Answer</option><option value="internal dnc">Internal DNC</option><option value="rejected">Rejected</option></select>
           <select name="fuel" defaultValue={params.fuel || ""} className="rounded-lg border border-slate-300 px-4 py-3"><option value="">All Fuel</option><option value="single">Single</option><option value="dual">Dual</option><option value="gas">Gas</option></select>
           <select name="campaign" defaultValue={params.campaign || ""} className="rounded-lg border border-slate-300 px-4 py-3"><option value="">All Forms</option><option value="energy">Energy</option><option value="phi">PHI</option><option value="nbn">NBN</option></select>
           <button className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700">Search</button>

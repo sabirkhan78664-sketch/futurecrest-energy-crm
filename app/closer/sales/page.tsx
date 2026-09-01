@@ -96,8 +96,8 @@ function CloserSalesContent() {
   const statusFilter =
     searchParams.get("status")?.toLowerCase() || "";
 
-  const isCallbackView =
-    statusFilter === "callback";
+  const isFollowupView =
+    statusFilter === "followup";
 
   const isReadyView =
     statusFilter === "ready";
@@ -179,8 +179,8 @@ function CloserSalesContent() {
    * Show only leads with status:
    * Assigned / Ready / New.
    *
-   * Callback:
-   * Show ONLY Callback leads.
+   * Follow-up:
+   * Show ONLY Follow-up leads.
    */
 
   const statusFilteredLeads = leads.filter(
@@ -189,8 +189,8 @@ function CloserSalesContent() {
         lead.status || ""
       ).toLowerCase();
 
-      if (isCallbackView) {
-        return status === "callback";
+      if (isFollowupView) {
+        return status === "follow-up";
       }
 
       if (isReadyView) {
@@ -360,16 +360,16 @@ function CloserSalesContent() {
 
                 <div className="flex items-center gap-3">
 
-                  {(isCallbackView ||
+                  {(isFollowupView ||
                     isReadyView) && (
                     <div
                       className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                        isCallbackView
+                        isFollowupView
                           ? "bg-orange-100 text-orange-600"
                           : "bg-emerald-100 text-emerald-600"
                       }`}
                     >
-                      {isCallbackView ? (
+                      {isFollowupView ? (
                         <PhoneCall size={22} />
                       ) : (
                         <CheckCircle size={22} />
@@ -380,16 +380,16 @@ function CloserSalesContent() {
                   <div>
 
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                      {isCallbackView
-                        ? "Callback Leads"
+                      {isFollowupView
+                        ? "Follow-up Leads"
                         : isReadyView
                         ? "Ready Leads"
-                        : "Assigned Leads"}
+                        : "My Leads"}
                     </h1>
 
                     <p className="mt-1 text-sm text-slate-500">
-                      {isCallbackView
-                        ? "Leads requiring callback follow-up."
+                      {isFollowupView
+                        ? "Leads requiring a follow-up."
                         : isReadyView
                         ? "Leads ready for you to process."
                         : "Leads assigned to you for closing."}
@@ -405,7 +405,7 @@ function CloserSalesContent() {
 
               <div
                 className={`rounded-xl border px-5 py-3 ${
-                  isCallbackView
+                  isFollowupView
                     ? "border-orange-200 bg-orange-50"
                     : isReadyView
                     ? "border-emerald-200 bg-emerald-50"
@@ -415,15 +415,15 @@ function CloserSalesContent() {
 
                 <div
                   className={`text-xs font-semibold uppercase tracking-wide ${
-                    isCallbackView
+                    isFollowupView
                       ? "text-orange-600"
                       : isReadyView
                       ? "text-emerald-600"
                       : "text-blue-600"
                   }`}
                 >
-                  {isCallbackView
-                    ? "Total Callback Leads"
+                  {isFollowupView
+                    ? "Total Follow-up Leads"
                     : isReadyView
                     ? "Total Ready Leads"
                     : "Total Assigned Leads"}
@@ -431,7 +431,7 @@ function CloserSalesContent() {
 
                 <div
                   className={`mt-0.5 text-2xl font-bold ${
-                    isCallbackView
+                    isFollowupView
                       ? "text-orange-600"
                       : isReadyView
                       ? "text-emerald-600"
@@ -469,8 +469,8 @@ function CloserSalesContent() {
                   setSearch(e.target.value)
                 }
                 placeholder={
-                  isCallbackView
-                    ? "Search callback leads, customer, mobile, Lead ID..."
+                  isFollowupView
+                    ? "Search follow-up leads, customer, mobile, Lead ID..."
                     : isReadyView
                     ? "Search ready leads, customer, mobile, Lead ID..."
                     : "Search leads, customer, mobile, Lead ID..."
@@ -497,8 +497,8 @@ function CloserSalesContent() {
                 />
 
                 <p className="text-sm">
-                  {isCallbackView
-                    ? "Loading callback leads..."
+                  {isFollowupView
+                    ? "Loading follow-up leads..."
                     : isReadyView
                     ? "Loading ready leads..."
                     : "Loading assigned leads..."}
@@ -559,7 +559,7 @@ function CloserSalesContent() {
 
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
 
-                  {isCallbackView ? (
+                  {isFollowupView ? (
                     <PhoneCall
                       size={27}
                       className="text-orange-500"
@@ -579,16 +579,16 @@ function CloserSalesContent() {
                 </div>
 
                 <h2 className="mt-4 text-lg font-bold text-slate-800">
-                  {isCallbackView
-                    ? "No Callback Leads"
+                  {isFollowupView
+                    ? "No Follow-up Leads"
                     : isReadyView
                     ? "No Ready Leads"
                     : "No Assigned Leads"}
                 </h2>
 
                 <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-                  {isCallbackView
-                    ? "There are currently no leads requiring a callback."
+                  {isFollowupView
+                    ? "There are currently no leads requiring a follow-up."
                     : isReadyView
                     ? "There are currently no leads ready to process."
                     : "There are currently no active leads assigned to you."}
@@ -618,7 +618,7 @@ function CloserSalesContent() {
                     String(
                       lead.status || ""
                     ).toLowerCase() ===
-                    "callback";
+                    "follow-up";
 
                   return (
                     <div
@@ -667,7 +667,7 @@ function CloserSalesContent() {
                                   <PhoneCall
                                     size={12}
                                   />
-                                  Callback
+                                  Follow-up
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700">
@@ -677,13 +677,6 @@ function CloserSalesContent() {
                                   {isReadyView
                                     ? "Ready"
                                     : "Assigned"}
-                                </span>
-                              )}
-
-                              {lead.approval_status ===
-                                "Approved" && (
-                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
-                                  Approved
                                 </span>
                               )}
 
@@ -851,7 +844,7 @@ function CloserSalesContent() {
                         </div>
 
                         {/* =================================================
-                            CALLBACK STRIP
+                            FOLLOW-UP STRIP
                         ================================================== */}
 
                         {isCallback && (
@@ -868,12 +861,12 @@ function CloserSalesContent() {
                               <div>
 
                                 <div className="text-[11px] font-bold uppercase tracking-wide text-orange-600">
-                                  Callback Due
+                                  Follow-up Due
                                 </div>
 
                                 <div className="text-sm font-bold text-orange-800">
                                   {callbackDate ||
-                                    "Callback scheduled"}
+                                    "Follow-up scheduled"}
                                 </div>
 
                               </div>
@@ -917,7 +910,7 @@ function CloserSalesContent() {
 
                           {isCallback && (
                             <span className="text-xs font-medium text-orange-500">
-                              Callback follow-up
+                              Follow-up
                             </span>
                           )}
 

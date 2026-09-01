@@ -368,13 +368,12 @@ export default function LeadForm({
   ];
 
   const RESUBMITTABLE_STATUSES = [
-    "Not Interested",
     "Lost",
   ];
 
   const BLOCKED_STATUSES = [
     "Internal DNC",
-    "Callback",
+    "Follow-up",
     "No Answer",
   ];
 
@@ -692,16 +691,16 @@ export default function LeadForm({
     }
 
     /* ==========================================================
-       CALLBACK
+       FOLLOW-UP
     ========================================================== */
 
     if (
-      status === "Callback" &&
+      status === "Follow-up" &&
       (!callbackDate ||
         !callbackTime)
     ) {
       alert(
-        "Please select Callback Date and Time."
+        "Please select Follow-up Date and Time."
       );
       return false;
     }
@@ -760,12 +759,12 @@ export default function LeadForm({
     setLoading(true);
 
     const finalCallbackDate =
-      status === "Callback"
+      status === "Follow-up"
         ? callbackDate || null
         : null;
 
     const finalCallbackTime =
-      status === "Callback"
+      status === "Follow-up"
         ? callbackTime || null
         : null;
 
@@ -1279,27 +1278,24 @@ export default function LeadForm({
                 ================================================== */
 
                 approval_status:
-                  currentRole === "Agent"
-                    ? "Pending"
-                    : "Approved",
+                  "Approved",
 
                 approved_by:
-                  currentRole === "Agent"
-                    ? null
-                    : currentUserId,
+                  currentUserId,
 
                 approved_at:
-                  currentRole === "Agent"
-                    ? null
-                    : new Date().toISOString(),
+                  new Date().toISOString(),
 
                 /* ==================================================
                    STATUS
+                   No approval gate — the server always sets a newly
+                   created lead's status to "New" regardless of what
+                   is sent here.
                 ================================================== */
 
                 status:
                   currentRole === "Agent"
-                    ? "Pending Approval"
+                    ? "New"
                     : status,
 
                 callback_date:

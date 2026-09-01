@@ -55,9 +55,8 @@ export default async function AgentsListPage({ searchParams }: Props) {
     // Bucketed by closed_at (when it was actually marked Sold), not
     // created_at — an old lead sold today is still today's sale.
     const todaySales = sold.filter((l: any) => l.closed_at && dayKey(l.closed_at) === todayKey);
-    const callbacks = leads.filter((l: any) => status(l) === "callback");
+    const followups = leads.filter((l: any) => status(l) === "follow-up");
     const rejected = leads.filter(rejectedLead);
-    const pending = leads.filter((l: any) => approval(l) === "pending" || !approval(l));
     const approved = leads.filter((l: any) => approval(l) === "approved");
 
     const last7Days = Array.from({ length: 7 }, (_, index) => {
@@ -76,9 +75,8 @@ export default async function AgentsListPage({ searchParams }: Props) {
       { title: "Today Sales", value: todaySales.length, href: "/my-leads?status=sold&period=today", icon: "✓", cls: "border-emerald-500 bg-emerald-600", valueCls: "text-white", titleCls: "text-white", iconCls: "bg-white/15 text-white", subCls: "text-emerald-100", sub: "Sold today" },
       { title: "All Leads", value: leads.length, href: "/my-leads", icon: "▤", cls: "border-indigo-200 bg-indigo-50", valueCls: "text-indigo-700", titleCls: "text-indigo-700", iconCls: "bg-white text-indigo-600", subCls: "text-indigo-600", sub: "Everything assigned to you" },
       { title: "All Sales", value: sold.length, href: "/my-leads?status=sold", icon: "$", cls: "border-emerald-200 bg-emerald-50", valueCls: "text-emerald-700", titleCls: "text-emerald-700", iconCls: "bg-white text-emerald-600", subCls: "text-emerald-600", sub: "Your sold leads" },
-      { title: "Pending Approval", value: pending.length, href: undefined, icon: "!", cls: "border-amber-200 bg-amber-50", valueCls: "text-amber-800", titleCls: "text-amber-700", iconCls: "bg-white text-amber-600", subCls: "text-amber-700", sub: "Admin review" },
       { title: "Rejected", value: rejected.length, href: "/my-leads?status=rejected", icon: "×", cls: "border-red-200 bg-red-50", valueCls: "text-red-800", titleCls: "text-red-700", iconCls: "bg-white text-red-600", subCls: "text-red-600", sub: "Open rejected leads" },
-      { title: "Call Backs", value: callbacks.length, href: "/my-leads?status=callback", icon: "↗", cls: "border-orange-200 bg-white", valueCls: "text-orange-600", iconCls: "bg-orange-50 text-orange-600", sub: "Leads to call back" },
+      { title: "Follow-ups", value: followups.length, href: "/my-leads?status=followup", icon: "↗", cls: "border-orange-200 bg-white", valueCls: "text-orange-600", iconCls: "bg-orange-50 text-orange-600", sub: "Leads to follow up" },
       { title: "Approval Rate", value: pct(approved.length, leads.length), href: "/my-leads", icon: "%", cls: "border-slate-200 bg-white", valueCls: "text-slate-900", iconCls: "bg-slate-100 text-slate-700", sub: "Approved / all your leads" },
     ];
 
@@ -141,7 +139,7 @@ export default async function AgentsListPage({ searchParams }: Props) {
               <h2 className="text-lg font-bold text-slate-900">Quick Actions</h2>
               <div className="mt-4 grid gap-2">
                 <Link href="/my-leads" className="rounded-lg border border-slate-200 p-3 text-sm font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50">📋 Open My Leads <span className="float-right">{leads.length}</span></Link>
-                <Link href="/my-leads?status=callback" className="rounded-lg border border-slate-200 p-3 text-sm font-semibold text-slate-700 hover:border-orange-300 hover:bg-orange-50">📞 Call Backs <span className="float-right text-orange-600">{callbacks.length}</span></Link>
+                <Link href="/my-leads?status=followup" className="rounded-lg border border-slate-200 p-3 text-sm font-semibold text-slate-700 hover:border-orange-300 hover:bg-orange-50">📞 Follow-ups <span className="float-right text-orange-600">{followups.length}</span></Link>
                 <Link href="/my-leads?status=sold" className="rounded-lg border border-slate-200 p-3 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50">💰 Sold Leads <span className="float-right text-emerald-600">{sold.length}</span></Link>
                 <Link href="/messages" className="rounded-lg border border-slate-200 p-3 text-sm font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50">💬 Messages <span className="float-right">Open</span></Link>
               </div>

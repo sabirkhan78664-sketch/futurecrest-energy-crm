@@ -161,7 +161,8 @@ export async function getLeads() {
   /*
    * ADMIN / SUPER ADMIN / CLOSER
    *
-   * Existing behavior: approved leads only.
+   * No approval gate — every lead is visible immediately, findable by
+   * these roles as soon as it's submitted.
    */
   const { data, error } = await supabase
     .from("leads")
@@ -174,7 +175,6 @@ export async function getLeads() {
          username
        )`
     )
-    .eq("approval_status", "Approved")
     .order("created_at", {
       ascending: false,
     });

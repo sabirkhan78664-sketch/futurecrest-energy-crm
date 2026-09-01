@@ -6,7 +6,6 @@ import StateClocks from "@/components/dashboard/StateClocks";
 import {
   Users,
   FileText,
-  AlertCircle,
   TrendingUp,
   DollarSign,
   ShieldAlert,
@@ -278,7 +277,7 @@ export default async function SuperAdminDashboard({
           METRIC CARDS
       ===================================================== */}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 
         <MetricCard
           label="Leads"
@@ -296,15 +295,6 @@ export default async function SuperAdminDashboard({
           valueClass="text-emerald-600"
           icon={<DollarSign size={16} className="text-emerald-500" />}
           href={withPeriod("/leads?status=Sold")}
-        />
-
-        <MetricCard
-          label="Pending"
-          value={metrics.pendingApprovals}
-          hint="Awaiting approval"
-          valueClass="text-amber-600"
-          icon={<AlertCircle size={16} className="text-amber-500" />}
-          href={withPeriod("/pending-approvals")}
         />
 
         <MetricCard

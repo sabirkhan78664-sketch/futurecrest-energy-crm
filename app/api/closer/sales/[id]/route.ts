@@ -187,7 +187,7 @@ export async function GET(
 |--------------------------------------------------------------------------
 | Closer can ONLY process an outcome:
 |
-| Sold, Not Interested, No Answer, Callback, Lost, Internal DNC
+| Sold, Interested, Processing, No Answer, Follow-up, Lost, Internal DNC
 |
 | General lead editing goes through /api/leads/[id]/edit instead.
 |--------------------------------------------------------------------------
@@ -355,9 +355,10 @@ export async function PATCH(
     if (
       ![
         "Sold",
-        "Not Interested",
+        "Interested",
+        "Processing",
         "No Answer",
-        "Callback",
+        "Follow-up",
         "Lost",
         "Internal DNC",
       ].includes(outcome)
@@ -393,21 +394,21 @@ export async function PATCH(
 
     /*
     |--------------------------------------------------------------------------
-    | CALLBACK
+    | FOLLOW-UP
     |--------------------------------------------------------------------------
     */
 
     const callbackDate =
-      outcome === "Callback"
+      outcome === "Follow-up"
         ? cleanDate(body?.callback_date)
         : null;
 
     const callbackTime =
-      outcome === "Callback"
+      outcome === "Follow-up"
         ? cleanString(body?.callback_time)
         : null;
 
-    if (outcome === "Callback") {
+    if (outcome === "Follow-up") {
       if (
         !callbackDate ||
         !callbackTime
@@ -416,7 +417,7 @@ export async function PATCH(
           {
             success: false,
             message:
-              "Callback date and time are required.",
+              "Follow-up date and time are required.",
           },
           { status: 400 }
         );
@@ -453,8 +454,8 @@ export async function PATCH(
             : "Not Required",
 
       assignment_status:
-        outcome === "Callback"
-          ? "Callback"
+        outcome === "Follow-up"
+          ? "Follow-up"
           : outcome,
 
       callback_date:
@@ -538,11 +539,11 @@ export async function PATCH(
 
     /*
     |--------------------------------------------------------------------------
-    | CALLBACK
+    | FOLLOW-UP
     |--------------------------------------------------------------------------
     */
 
-    if (outcome === "Callback") {
+    if (outcome === "Follow-up") {
       updateData.closed_at = null;
     }
 

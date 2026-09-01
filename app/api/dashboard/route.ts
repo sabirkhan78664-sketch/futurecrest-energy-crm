@@ -67,8 +67,8 @@ export async function GET() {
       (lead) => lead.status === "Sold"
     ).length;
 
-    const callback = allLeads.filter(
-      (lead) => lead.status === "Callback"
+    const followup = allLeads.filter(
+      (lead) => lead.status === "Follow-up"
     ).length;
 
     const lost = allLeads.filter(
@@ -96,7 +96,7 @@ export async function GET() {
         assigned,
         ready,
         sold,
-        callback,
+        followup,
         lost,
       },
     });

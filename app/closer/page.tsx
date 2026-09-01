@@ -96,7 +96,7 @@ export default async function CloserDashboard() {
 
               <div>
                 <h3 className="text-lg font-bold text-slate-800">
-                  Assigned Leads
+                  My Leads
                 </h3>
 
                 <p className="mt-1 text-sm text-slate-500">

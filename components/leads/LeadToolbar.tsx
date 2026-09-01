@@ -70,10 +70,15 @@ export default function LeadToolbar({
           onChange={(e) => setStatus(e.target.value)}
         >
           <option value="">All Status</option>
-          <option>Callback</option>
-          <option>Sale</option>
-          <option>Rejected</option>
+          <option>New</option>
+          <option>Follow-up</option>
+          <option>Interested</option>
+          <option>Processing</option>
+          <option>Sold</option>
           <option>Lost</option>
+          <option>No Answer</option>
+          <option>Internal DNC</option>
+          <option>Rejected</option>
         </select>
 
         <select

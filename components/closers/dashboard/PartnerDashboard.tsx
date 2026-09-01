@@ -273,7 +273,7 @@ export default async function PartnerDashboard({
 
       {/* METRIC CARDS */}
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
         <div className="rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leads</p>
           <p className="mt-2 text-3xl font-bold text-blue-700">{totalInPeriod}</p>
@@ -284,12 +284,6 @@ export default async function PartnerDashboard({
           <p className="text-xs font-semibold uppercase tracking-wide text-white">Sales</p>
           <p className="mt-2 text-3xl font-bold text-white">{sold.length}</p>
           <p className="mt-3 text-xs text-emerald-100">Marked Sold</p>
-        </div>
-
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Pending</p>
-          <p className="mt-2 text-3xl font-bold text-amber-800">{pending.length}</p>
-          <p className="mt-3 text-xs text-amber-700">Awaiting approval</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

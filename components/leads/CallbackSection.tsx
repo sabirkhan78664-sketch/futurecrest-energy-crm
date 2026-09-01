@@ -15,7 +15,7 @@ export default function CallbackSection({
   callbackTime,
   setCallbackTime,
 }: CallbackSectionProps) {
-  if (status !== "Callback") return null;
+  if (status !== "Follow-up") return null;
 
   return (
     <section>
@@ -25,7 +25,7 @@ export default function CallbackSection({
         <div>
 
           <label className="mb-2 block text-sm font-medium">
-            Callback Date
+            Follow-up Date
           </label>
 
           <input
@@ -40,7 +40,7 @@ export default function CallbackSection({
         <div>
 
           <label className="mb-2 block text-sm font-medium">
-            Callback Time
+            Follow-up Time
           </label>
 
           <input

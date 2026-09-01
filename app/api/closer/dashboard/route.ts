@@ -92,10 +92,10 @@ export async function GET() {
     ).length;
 
     /*
-     * CALLBACK
+     * FOLLOW-UP
      */
-    const callback = allLeads.filter(
-      (lead) => lead.status === "Callback"
+    const followup = allLeads.filter(
+      (lead) => lead.status === "Follow-up"
     ).length;
 
     /*
@@ -111,7 +111,7 @@ export async function GET() {
      * Leads that are ready for the Closer
      * to process for the first time.
      *
-     * Callback is deliberately NOT included here.
+     * Follow-up is deliberately NOT included here.
      */
     const ready = allLeads.filter(
       (lead) =>
@@ -127,7 +127,7 @@ export async function GET() {
         assigned,
         ready,
         sold,
-        callback,
+        followup,
         lost,
       },
     });

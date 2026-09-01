@@ -17,7 +17,7 @@ interface Counts {
   assigned: number;
   ready: number;
   sold: number;
-  callback: number;
+  followup: number;
   lost: number;
 }
 
@@ -26,7 +26,7 @@ export default function CloserSalesBoard() {
     assigned: 0,
     ready: 0,
     sold: 0,
-    callback: 0,
+    followup: 0,
     lost: 0,
   });
 
@@ -162,20 +162,20 @@ export default function CloserSalesBoard() {
       </Link>
 
       {/* =====================================================
-          CALLBACK
+          FOLLOW-UP
       ====================================================== */}
       <Link
-        href="/closer/sales?status=Callback"
+        href="/closer/sales?status=followup"
         className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
       >
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
-              Callback
+              Follow-up
             </p>
 
             <p className="mt-2 text-3xl font-bold text-orange-500">
-              {displayNumber(counts.callback)}
+              {displayNumber(counts.followup)}
             </p>
           </div>
 

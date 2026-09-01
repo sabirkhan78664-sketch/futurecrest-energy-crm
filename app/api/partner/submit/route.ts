@@ -488,9 +488,12 @@ export async function POST(req: NextRequest) {
           // partner code by the time the lead is processed.
           partner_code: partnerCode,
 
-          approval_status: "Pending",
-          status: "Pending Approval",
-          assignment_status: "Pending Approval",
+          // No approval gate — visible/findable immediately, same as
+          // every other creation path.
+          approval_status: "Approved",
+          approved_at: new Date().toISOString(),
+          status: "New",
+          assignment_status: "Unassigned",
 
           qa_status: "Not Required",
 

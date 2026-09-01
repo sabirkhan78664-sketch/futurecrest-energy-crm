@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidElement, type ReactNode } from "react";
 import QASection from "@/components/leads/QASection";
+import TakeLeadButton from "@/components/leads/TakeLeadButton";
 
 interface Props {
   params: Promise<{
@@ -152,6 +153,18 @@ export default async function LeadDetailsPage({
             </div>
 
             <div className="flex flex-wrap gap-3">
+
+              {/* First-click-wins claim — Admin/Super Admin/Closer,
+                  only while nobody has claimed this lead yet. */}
+              {["Admin", "Super Admin", "Closer"].includes(
+                profile.role
+              ) &&
+                !lead.assigned_closer && (
+                  <TakeLeadButton
+                    leadId={lead.id}
+                    className="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700"
+                  />
+                )}
 
               {/* Only Admin/Super Admin can edit */}
               {!isCloser && (

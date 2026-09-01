@@ -14,7 +14,6 @@ import {
   BarChart3,
   Upload,
   Settings,
-  Shield,
   Calendar,
   MessageSquare,
   ShieldCheck,
@@ -176,14 +175,6 @@ export default function Sidebar({
       },
 
       {
-        name: "Pending Approvals",
-        href: "/pending-approvals",
-        icon: Shield,
-        badge: stats.pendingApproval,
-        group: "Approvals & QA",
-      },
-
-      {
         name: "QA Queue",
         href: "/qa",
         icon: ShieldCheck,
@@ -306,8 +297,11 @@ export default function Sidebar({
       },
 
       {
-  name: "Leads",
-  href: "/sales",
+  // /sales is the older closer_assignments-based list; /closer/sales
+  // is the active page reading leads.assigned_closer directly (what
+  // Take Lead sets), so it must be the one Closers actually land on.
+  name: "My Leads",
+  href: "/closer/sales",
   icon: FileText,
 },
 

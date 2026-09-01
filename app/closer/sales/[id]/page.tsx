@@ -15,7 +15,8 @@ import {
   CheckCircle,
   PhoneCall,
   PhoneMissed,
-  ThumbsDown,
+  ThumbsUp,
+  Clock3,
   ShieldOff,
   XCircle,
   Save,
@@ -99,10 +100,11 @@ interface Lead {
 
 type Outcome =
   | "Sold"
-  | "Not Interested"
-  | "No Answer"
-  | "Callback"
+  | "Interested"
+  | "Processing"
+  | "Follow-up"
   | "Lost"
+  | "No Answer"
   | "Internal DNC"
   | "";
 
@@ -360,17 +362,17 @@ export default function CloserProcessLeadPage() {
       return;
     }
 
-    if (outcome === "Callback") {
+    if (outcome === "Follow-up") {
       if (!callbackDate) {
         alert(
-          "Please select callback date."
+          "Please select follow-up date."
         );
         return;
       }
 
       if (!callbackTime) {
         alert(
-          "Please select callback time."
+          "Please select follow-up time."
         );
         return;
       }
@@ -404,12 +406,12 @@ export default function CloserProcessLeadPage() {
             outcome,
 
             callback_date:
-              outcome === "Callback"
+              outcome === "Follow-up"
                 ? callbackDate
                 : null,
 
             callback_time:
-              outcome === "Callback"
+              outcome === "Follow-up"
                 ? callbackTime
                 : null,
 
@@ -457,7 +459,7 @@ export default function CloserProcessLeadPage() {
 
       setOutcome("");
 
-      if (outcome !== "Callback") {
+      if (outcome !== "Follow-up") {
         setCallbackDate("");
         setCallbackTime("");
       }
@@ -1450,21 +1452,40 @@ export default function CloserProcessLeadPage() {
 
                   <OutcomeCard
                     selected={
-                      outcome === "Not Interested"
+                      outcome === "Interested"
                     }
                     onClick={() =>
                       setOutcome(
-                        "Not Interested"
+                        "Interested"
                       )
                     }
                     icon={
-                      <ThumbsDown
+                      <ThumbsUp
                         size={28}
                       />
                     }
-                    title="Not Interested"
-                    description="Customer declined the offer"
-                    color="gray"
+                    title="Interested"
+                    description="Customer is interested in the offer"
+                    color="teal"
+                  />
+
+                  <OutcomeCard
+                    selected={
+                      outcome === "Processing"
+                    }
+                    onClick={() =>
+                      setOutcome(
+                        "Processing"
+                      )
+                    }
+                    icon={
+                      <Clock3
+                        size={28}
+                      />
+                    }
+                    title="Processing"
+                    description="Sale is being processed"
+                    color="cyan"
                   />
 
                   <OutcomeCard
@@ -1488,11 +1509,11 @@ export default function CloserProcessLeadPage() {
 
                   <OutcomeCard
                     selected={
-                      outcome === "Callback"
+                      outcome === "Follow-up"
                     }
                     onClick={() =>
                       setOutcome(
-                        "Callback"
+                        "Follow-up"
                       )
                     }
                     icon={
@@ -1500,7 +1521,7 @@ export default function CloserProcessLeadPage() {
                         size={28}
                       />
                     }
-                    title="Callback"
+                    title="Follow-up"
                     description="Need to follow up later"
                     color="orange"
                   />
@@ -1688,16 +1709,16 @@ export default function CloserProcessLeadPage() {
                   </div>
                 )}
 
-                {/* CALLBACK */}
+                {/* FOLLOW-UP */}
 
-                {outcome === "Callback" && (
+                {outcome === "Follow-up" && (
                   <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50 p-5">
 
                     <div className="flex items-center gap-2 font-bold text-orange-800">
 
                       <Calendar size={20} />
 
-                      Callback Schedule
+                      Follow-up Schedule
 
                     </div>
 
@@ -1706,7 +1727,7 @@ export default function CloserProcessLeadPage() {
                       <div>
 
                         <label className="mb-2 block text-sm font-semibold text-slate-700">
-                          Callback Date *
+                          Follow-up Date *
                         </label>
 
                         <input
@@ -1725,7 +1746,7 @@ export default function CloserProcessLeadPage() {
                       <div>
 
                         <label className="mb-2 block text-sm font-semibold text-slate-700">
-                          Callback Time *
+                          Follow-up Time *
                         </label>
 
                         <input
@@ -1810,12 +1831,14 @@ export default function CloserProcessLeadPage() {
                     className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 font-bold text-white shadow-sm transition ${
                       outcome === "Sold"
                         ? "bg-emerald-600 hover:bg-emerald-700"
-                        : outcome === "Callback"
+                        : outcome === "Follow-up"
                         ? "bg-orange-500 hover:bg-orange-600"
                         : outcome === "Lost"
                         ? "bg-red-600 hover:bg-red-700"
-                        : outcome === "Not Interested"
-                        ? "bg-slate-600 hover:bg-slate-700"
+                        : outcome === "Interested"
+                        ? "bg-teal-600 hover:bg-teal-700"
+                        : outcome === "Processing"
+                        ? "bg-cyan-600 hover:bg-cyan-700"
                         : outcome === "No Answer"
                         ? "bg-amber-500 hover:bg-amber-600"
                         : outcome === "Internal DNC"
@@ -2192,7 +2215,8 @@ function OutcomeCard({
     | "green"
     | "orange"
     | "red"
-    | "gray"
+    | "teal"
+    | "cyan"
     | "amber"
     | "rose";
 }) {
@@ -2221,12 +2245,20 @@ function OutcomeCard({
       ring: "ring-red-200",
     },
 
-    gray: {
-      border: "border-slate-300",
-      bg: "bg-slate-50",
-      icon: "bg-slate-200 text-slate-600",
-      title: "text-slate-700",
-      ring: "ring-slate-200",
+    teal: {
+      border: "border-teal-300",
+      bg: "bg-teal-50",
+      icon: "bg-teal-100 text-teal-600",
+      title: "text-teal-700",
+      ring: "ring-teal-200",
+    },
+
+    cyan: {
+      border: "border-cyan-300",
+      bg: "bg-cyan-50",
+      icon: "bg-cyan-100 text-cyan-600",
+      title: "text-cyan-700",
+      ring: "ring-cyan-200",
     },
 
     amber: {

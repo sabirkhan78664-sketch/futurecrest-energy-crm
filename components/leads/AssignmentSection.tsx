@@ -94,7 +94,7 @@ export default function AssignmentSection({
 
           {isAgent && (
             <p className="mt-1 text-xs text-slate-500">
-              A closer will be assigned after approval.
+              A closer can claim this lead via Take Lead once submitted.
             </p>
           )}
         </div>
@@ -113,20 +113,25 @@ export default function AssignmentSection({
             className="h-11 w-full rounded-xl border px-4 disabled:bg-slate-100 disabled:text-slate-500"
           >
             {isAgent ? (
-              <option>Pending Approval</option>
+              <option>New</option>
             ) : (
               <>
-                <option>Callback</option>
-                <option>Sale</option>
-                <option>Rejected</option>
+                <option>New</option>
+                <option>Follow-up</option>
+                <option>Interested</option>
+                <option>Processing</option>
+                <option>Sold</option>
                 <option>Lost</option>
+                <option>No Answer</option>
+                <option>Internal DNC</option>
+                <option>Rejected</option>
               </>
             )}
           </select>
 
           {isAgent && (
             <p className="mt-1 text-xs text-slate-500">
-              Status will change after admin review.
+              Status will change once a closer claims and processes this lead.
             </p>
           )}
         </div>

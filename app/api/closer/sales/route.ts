@@ -59,7 +59,7 @@ export async function GET() {
     }
 
     // --------------------------------------------------
-    // 4. LOAD ALL APPROVED LEADS ASSIGNED TO CLOSER
+    // 4. LOAD ALL LEADS ASSIGNED TO CLOSER
     // --------------------------------------------------
     //
     // IMPORTANT:
@@ -68,15 +68,14 @@ export async function GET() {
     // Some valid leads may have lead_id = null.
     // The UI can safely fall back to the database id.
     //
-    // This keeps Dashboard and Sales page counts
-    // consistent.
+    // No approval gate — a lead claimed via Take Lead shows up here
+    // immediately, regardless of approval_status.
     // --------------------------------------------------
 
     const { data: leads, error } = await adminSupabase
       .from("leads")
       .select("*")
       .eq("assigned_closer", closerId)
-      .eq("approval_status", "Approved")
       .order("assigned_at", {
         ascending: false,
       });
@@ -99,7 +98,7 @@ export async function GET() {
     const allLeads = leads || [];
 
     console.log(
-      "Assigned approved leads found:",
+      "Assigned leads found:",
       allLeads.length
     );
 
@@ -123,9 +122,9 @@ export async function GET() {
           lead.status === "New"
       ).length,
 
-      callback: allLeads.filter(
+      followup: allLeads.filter(
         (lead) =>
-          lead.status === "Callback"
+          lead.status === "Follow-up"
       ).length,
 
       sold: allLeads.filter(

@@ -210,14 +210,17 @@ export async function POST(req: NextRequest) {
     //
     // Agent and Closer both get status-aware rules instead of a flat
     // rejection (Closer only reaches this at all because Closers can
-    // now create leads too, same as Agent):
-    //   - Not Interested / Lost  -> allowed (resubmittable)
-    //   - Internal DNC / Callback / No Answer -> blocked
+    // now create leads too, same as Agent). Re-mapped to the 7-value
+    // status set (Follow-up, Interested, Processing, Sold, Lost,
+    // No Answer, Internal DNC):
+    //   - Lost -> allowed (resubmittable)
+    //   - Follow-up / No Answer / Internal DNC -> blocked
     //   - Sold -> allowed only when resubmitting for a different
     //     PHI or NBN campaign than the existing sold lead
-    //   - Anything else (New, Attempt 1/2, Documents Pending,
-    //     Verification, Wrong Number, DNCR, Duplicate) -> blocked,
-    //     since the lead is still actively in progress
+    //   - Anything else (Interested, Processing, New, Attempt 1/2,
+    //     Documents Pending, Verification, Wrong Number, DNCR,
+    //     Duplicate) -> blocked, since the lead is still actively
+    //     in progress
     //
     // Every other role keeps the original flat rejection.
     // ============================================================
@@ -250,14 +253,13 @@ export async function POST(req: NextRequest) {
         );
 
         const RESUBMITTABLE_STATUSES = [
-          "Not Interested",
           "Lost",
         ];
 
         const BLOCKED_STATUSES = [
-          "Internal DNC",
-          "Callback",
+          "Follow-up",
           "No Answer",
+          "Internal DNC",
         ];
 
         if (BLOCKED_STATUSES.includes(existingStatus)) {
@@ -731,7 +733,7 @@ export async function POST(req: NextRequest) {
             assignment_status:
               isAdmin && body.assigned_closer
                 ? "Assigned"
-                : "Pending Approval",
+                : "Unassigned",
 
             assigned_at:
               isAdmin && body.assigned_closer
@@ -745,22 +747,20 @@ export async function POST(req: NextRequest) {
 
             // ==================================================
             // APPROVAL
+            //
+            // No approval gate — every lead is approved on creation
+            // regardless of who submitted it, and is visible/findable
+            // immediately.
             // ==================================================
 
             approval_status:
-              isAdmin
-                ? "Approved"
-                : "Pending",
+              "Approved",
 
             approved_by:
-              isAdmin
-                ? verifiedUserId
-                : null,
+              verifiedUserId,
 
             approved_at:
-              isAdmin
-                ? new Date().toISOString()
-                : null,
+              new Date().toISOString(),
 
             rejected_by:
               null,
@@ -773,12 +773,15 @@ export async function POST(req: NextRequest) {
 
             // ==================================================
             // STATUS
+            //
+            // A freshly created, unclaimed lead always starts as
+            // "New" — the 7-value outcome set (Follow-up, Interested,
+            // Processing, Sold, Lost, No Answer, Internal DNC) is set
+            // later by whichever Closer claims it via Take Lead.
             // ==================================================
 
             status:
-              isAdmin
-                ? body.status
-                : "Pending Approval",
+              "New",
 
             // QA is post-sale only. New/non-sold leads are not audited.
             qa_status:

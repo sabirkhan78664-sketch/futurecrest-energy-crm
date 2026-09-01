@@ -13,6 +13,7 @@ import {
 import { deleteLead } from "@/lib/leads-client";
 import ApproveLeadModal from "./ApproveLeadModal";
 import RejectLeadModal from "./RejectLeadModal";
+import TakeLeadButton from "./TakeLeadButton";
 
 interface Lead {
   id: number;
@@ -90,10 +91,24 @@ function StatusBadge({
         </span>
       );
 
-    case "Callback":
+    case "Follow-up":
       return (
         <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-          Callback
+          Follow-up
+        </span>
+      );
+
+    case "Interested":
+      return (
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
+          Interested
+        </span>
+      );
+
+    case "Processing":
+      return (
+        <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700">
+          Processing
         </span>
       );
 
@@ -115,13 +130,6 @@ function StatusBadge({
       return (
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
           No Answer
-        </span>
-      );
-
-    case "Not Interested":
-      return (
-        <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-          Not Interested
         </span>
       );
 
@@ -665,6 +673,21 @@ export default function LeadTable({
 
                         {!isAgent && (
                           <>
+                            {/* --------------------------------
+                                TAKE LEAD
+
+                                First-click-wins claim — visible to
+                                Admin/Super Admin/Closer on any lead
+                                nobody has claimed yet.
+                            -------------------------------- */}
+
+                            {(isAdmin || isCloser) &&
+                              !lead.assigned_closer && (
+                                <TakeLeadButton
+                                  leadId={lead.id}
+                                />
+                              )}
+
                             {/* --------------------------------
                                 VIEW
                             -------------------------------- */}
