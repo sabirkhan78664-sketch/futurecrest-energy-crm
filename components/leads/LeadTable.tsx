@@ -372,7 +372,7 @@ export default function LeadTable({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border bg-white shadow">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 
         <table className="min-w-full">
 

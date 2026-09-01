@@ -53,19 +53,19 @@ export default function LeadToolbar({
   }`;
 
   return (
-    <div className="mb-6 rounded-xl border bg-white p-5 shadow">
+    <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
 
         <input
-          className="rounded-lg border p-3 md:col-span-2"
+          className="rounded-xl border border-slate-300 p-3 md:col-span-2"
           placeholder="Search Lead ID, Customer, Mobile..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-300 p-3"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -82,7 +82,7 @@ export default function LeadToolbar({
         </select>
 
         <select
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-300 p-3"
           value={fuel}
           onChange={(e) => setFuel(e.target.value)}
         >
@@ -93,7 +93,7 @@ export default function LeadToolbar({
         </select>
 
         <select
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-300 p-3"
           value={campaign}
           onChange={(e) => setCampaign(e.target.value)}
         >
@@ -107,7 +107,7 @@ export default function LeadToolbar({
         </select>
 
         <select
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-300 p-3"
           value={agent}
           onChange={(e) => setAgent(e.target.value)}
         >
@@ -126,7 +126,7 @@ export default function LeadToolbar({
 
         <button
           onClick={resetFilters}
-          className="rounded-lg bg-gray-200 px-5 py-2 hover:bg-gray-300"
+          className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           Reset Filters
         </button>
@@ -135,7 +135,7 @@ export default function LeadToolbar({
 
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 rounded-lg border px-5 py-2 hover:bg-slate-100"
+            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             <RefreshCw size={16} />
             Refresh
@@ -144,7 +144,7 @@ export default function LeadToolbar({
           <a
             href={exportHref}
             download
-            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             <Download size={16} />
             Export CSV
@@ -152,7 +152,7 @@ export default function LeadToolbar({
 
           <Link
             href="/leads/new"
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-white shadow-sm transition hover:bg-blue-700"
           >
             <Plus size={16} />
             New Lead
