@@ -46,6 +46,8 @@ interface Lead {
   campaign: string | null;
   current_retailer: string | null;
   offered_retailer: string | null;
+  nmi: string | null;
+  mirn: string | null;
 
   dncr: string | null;
   dncr_number: string | null;
@@ -210,6 +212,10 @@ export default function CloserProcessLeadPage() {
 
       offered_retailer:
         leadData.offered_retailer || "",
+
+      nmi: leadData.nmi || "",
+
+      mirn: leadData.mirn || "",
 
       campaign: leadData.campaign || "",
 
@@ -871,6 +877,34 @@ export default function CloserProcessLeadPage() {
                         onChange={(v) =>
                           updateField(
                             "offered_retailer",
+                            v
+                          )
+                        }
+                      />
+
+                      <EditableField
+                        label="NMI"
+                        value={
+                          form.nmi
+                        }
+                        editing={editing}
+                        onChange={(v) =>
+                          updateField(
+                            "nmi",
+                            v
+                          )
+                        }
+                      />
+
+                      <EditableField
+                        label="MIRN"
+                        value={
+                          form.mirn
+                        }
+                        editing={editing}
+                        onChange={(v) =>
+                          updateField(
+                            "mirn",
                             v
                           )
                         }
