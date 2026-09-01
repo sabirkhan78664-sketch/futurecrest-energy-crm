@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { getMyLeads } from "@/lib/myLeads";
+import { adminSupabase } from "@/lib/admin";
 import TopAgentPerformance from "./TopAgentPerformance";
 import PartnerLinkCard from "./PartnerLinkCard";
 import StateClocks from "@/components/dashboard/StateClocks";
@@ -169,6 +170,31 @@ export default async function PartnerDashboard({
     )
     .slice(0, 8);
 
+  // leads.assigned_closer has no foreign key constraint to profiles in the
+  // database (confirmed directly against the schema), so the closer's name
+  // is resolved with a separate lookup, same as the Super Admin dashboard.
+  const closerIds = Array.from(
+    new Set(
+      recentLeads
+        .map((lead: { assigned_closer: string | null }) => lead.assigned_closer)
+        .filter((id: string | null): id is string => Boolean(id))
+    )
+  );
+
+  const { data: closerProfiles } = closerIds.length
+    ? await adminSupabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", closerIds)
+    : { data: [] as { id: string; full_name: string | null }[] };
+
+  const closerNameById = new Map(
+    (closerProfiles || []).map((profile) => [
+      profile.id,
+      profile.full_name,
+    ])
+  );
+
   // TOP PERFORMANCE — the partner's own field agents, identified by the
   // free-text Agent Name they entered on the submission form (these are
   // not CRM users, so there's no profile/employee_id to join against).
@@ -335,10 +361,12 @@ export default async function PartnerDashboard({
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase text-slate-400">
               <tr>
                 <th className="px-4 py-3">Lead ID</th>
+                <th className="px-4 py-3">Client ID</th>
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Mobile</th>
                 <th className="px-4 py-3">Campaign</th>
                 <th className="px-4 py-3">Offered Retailer</th>
+                <th className="px-4 py-3">Closer</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Date</th>
               </tr>
@@ -357,6 +385,8 @@ export default async function PartnerDashboard({
                       </Link>
                     </td>
 
+                    <td className="px-4 py-3 text-xs">{lead.cl_id || "—"}</td>
+
                     <td className="px-4 py-3 text-sm">{lead.customer_name || "-"}</td>
 
                     <td className="px-4 py-3 text-xs text-slate-500">{lead.mobile || "-"}</td>
@@ -372,6 +402,10 @@ export default async function PartnerDashboard({
                     </td>
 
                     <td className="px-4 py-3 text-xs">{lead.offered_retailer || "—"}</td>
+
+                    <td className="px-4 py-3 text-xs">
+                      {closerNameById.get(lead.assigned_closer) || "—"}
+                    </td>
 
                     <td className="px-4 py-3">
                       <span
@@ -390,7 +424,7 @@ export default async function PartnerDashboard({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     No leads yet.
                   </td>
                 </tr>

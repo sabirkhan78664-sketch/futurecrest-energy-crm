@@ -183,6 +183,8 @@ export default async function SuperAdminDashboard({
       approval_status,
       created_at,
       campaign,
+      cl_id,
+      assigned_closer,
       agent:profiles!leads_assigned_agent_fkey(
         full_name,
         employee_id
@@ -192,6 +194,33 @@ export default async function SuperAdminDashboard({
       ascending: false,
     })
     .limit(8);
+
+  // leads.assigned_closer has no foreign key constraint to profiles in the
+  // database (confirmed directly against the schema — only assigned_agent
+  // has one), so a profiles!<fk>() embed isn't possible here. Resolved the
+  // same way every other place in the codebase shows the assigned Closer's
+  // name: a separate lookup by id.
+  const closerIds = Array.from(
+    new Set(
+      (recentLeads || [])
+        .map((lead: { assigned_closer: string | null }) => lead.assigned_closer)
+        .filter((id: string | null): id is string => Boolean(id))
+    )
+  );
+
+  const { data: closerProfiles } = closerIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", closerIds)
+    : { data: [] as { id: string; full_name: string | null }[] };
+
+  const closerNameById = new Map(
+    (closerProfiles || []).map((profile) => [
+      profile.id,
+      profile.full_name,
+    ])
+  );
 
   const maxTrend = Math.max(
     ...metrics.salesTrend.map((day) => day.count),
@@ -548,10 +577,12 @@ export default async function SuperAdminDashboard({
 
               <tr>
                 <th className="px-4 py-3">Lead ID</th>
+                <th className="px-4 py-3">Client ID</th>
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Mobile</th>
                 <th className="px-4 py-3">Campaign</th>
                 <th className="px-4 py-3">Offered Retailer</th>
+                <th className="px-4 py-3">Closer</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Date</th>
               </tr>
@@ -578,6 +609,10 @@ export default async function SuperAdminDashboard({
                       </Link>
                     </td>
 
+                    <td className="px-4 py-3 text-xs">
+                      {lead.cl_id || "—"}
+                    </td>
+
                     <td className="px-4 py-3 text-sm">
                       {lead.customer_name || "-"}
                     </td>
@@ -598,6 +633,10 @@ export default async function SuperAdminDashboard({
 
                     <td className="px-4 py-3 text-xs">
                       {lead.offered_retailer || "—"}
+                    </td>
+
+                    <td className="px-4 py-3 text-xs">
+                      {closerNameById.get(lead.assigned_closer) || "—"}
                     </td>
 
                     <td className="px-4 py-3">
@@ -622,7 +661,7 @@ export default async function SuperAdminDashboard({
 
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="py-8 text-center text-slate-400"
                   >
                     No leads available.{" "}
