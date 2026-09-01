@@ -540,7 +540,7 @@ export async function POST(req: NextRequest) {
               body.email,
 
             dob:
-              body.dob,
+              body.dob || null,
 
             address:
               body.address,
@@ -677,12 +677,12 @@ export async function POST(req: NextRequest) {
 
             phi_booked_date:
               campaign === "PHI"
-                ? body.phi_booked_date
+                ? body.phi_booked_date || null
                 : null,
 
             phi_booked_time:
               campaign === "PHI"
-                ? body.phi_booked_time
+                ? body.phi_booked_time || null
                 : null,
 
             phi_agent_note:
@@ -780,10 +780,10 @@ export async function POST(req: NextRequest) {
               "Not Required",
 
             callback_date:
-              body.callback_date,
+              body.callback_date || null,
 
             callback_time:
-              body.callback_time,
+              body.callback_time || null,
 
             // ==================================================
             // LOCK

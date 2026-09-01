@@ -65,6 +65,23 @@ export async function PATCH(
       delete body[key];
     }
 
+    // Postgres date/time columns reject an empty string ("" is not a
+    // valid date) — every caller of this route (the admin LeadForm edit,
+    // the Closer's Process Lead save, etc.) builds its form state with
+    // "" as the empty default, so coerce blank values to null here once
+    // rather than relying on each caller to remember to do it.
+    for (const field of [
+      "dob",
+      "callback_date",
+      "callback_time",
+      "phi_booked_date",
+      "phi_booked_time",
+    ]) {
+      if (field in body && !body[field]) {
+        body[field] = null;
+      }
+    }
+
     const { data, error } = await adminSupabase
       .from("leads")
       .update(body)
