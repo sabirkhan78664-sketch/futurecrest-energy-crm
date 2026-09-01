@@ -188,11 +188,9 @@ export default async function SuperAdminDashboard({
       campaign,
       cl_id,
       channel_name,
-      assigned_closer,
-      agent:profiles!leads_assigned_agent_fkey(
-        full_name,
-        employee_id
-      )
+      created_by,
+      agent_name,
+      assigned_closer
     `)
     .order("created_at", {
       ascending: false,
@@ -201,9 +199,9 @@ export default async function SuperAdminDashboard({
 
   // leads.assigned_closer has no foreign key constraint to profiles in the
   // database (confirmed directly against the schema — only assigned_agent
-  // has one), so a profiles!<fk>() embed isn't possible here. Resolved the
-  // same way every other place in the codebase shows the assigned Closer's
-  // name: a separate lookup by id.
+  // has one), so a profiles!<fk>() embed isn't possible here; created_by is
+  // resolved the same manual way for consistency, since no embed for it is
+  // used anywhere else in the codebase either.
   const closerIds = Array.from(
     new Set(
       (recentLeads || [])
@@ -218,6 +216,33 @@ export default async function SuperAdminDashboard({
         .select("id, full_name")
         .in("id", closerIds)
     : { data: [] as { id: string; full_name: string | null }[] };
+
+  // The Agent column shows whoever actually submitted the lead — Agent,
+  // Closer, Admin, or Super Admin all set created_by on submission.
+  // Channel Partner submissions leave created_by null and store the
+  // submitter's name directly on the lead as agent_name instead (handled
+  // as a fallback where the table is rendered).
+  const creatorIds = Array.from(
+    new Set(
+      (recentLeads || [])
+        .map((lead: { created_by: string | null }) => lead.created_by)
+        .filter((id: string | null): id is string => Boolean(id))
+    )
+  );
+
+  const { data: creatorProfiles } = creatorIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, employee_id")
+        .in("id", creatorIds)
+    : { data: [] as { id: string; full_name: string | null; employee_id: string | null }[] };
+
+  const creatorNameById = new Map(
+    (creatorProfiles || []).map((profile) => [
+      profile.id,
+      profile.full_name || profile.employee_id,
+    ])
+  );
 
   const closerNameById = new Map(
     (closerProfiles || []).map((profile) => [
@@ -624,7 +649,9 @@ export default async function SuperAdminDashboard({
                     </td>
 
                     <td className="px-4 py-3 text-xs">
-                      {lead.agent?.full_name || "—"}
+                      {creatorNameById.get(lead.created_by) ||
+                        lead.agent_name ||
+                        "—"}
                     </td>
 
                     <td className="px-4 py-3 text-xs">
