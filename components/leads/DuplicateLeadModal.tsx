@@ -7,22 +7,36 @@ interface DuplicateLeadModalProps {
   // user for this specific duplicate — server-side stays the source of
   // truth regardless of what this shows.
   canOverride: boolean;
+  isAgent: boolean;
   reason: string;
   setReason: (value: string) => void;
   onClose: () => void;
   onOverride: () => void;
+  onSwitchCampaign: (campaign: "PHI" | "NBN") => void;
 }
 
 export default function DuplicateLeadModal({
   open,
   lead,
   canOverride,
+  isAgent,
   reason,
   setReason,
   onClose,
   onOverride,
+  onSwitchCampaign,
 }: DuplicateLeadModalProps) {
   if (!open) return null;
+
+  // An Agent hitting a Sold duplicate isn't blocked outright — they can
+  // still resubmit it under a different PHI or NBN campaign. Offer that
+  // path directly instead of a dead-end message.
+  const showCampaignSwitch =
+    !canOverride &&
+    isAgent &&
+    lead?.status === "Sold";
+
+  const existingCampaign = String(lead?.campaign || "");
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -57,10 +71,52 @@ export default function DuplicateLeadModal({
 
         </div>
 
-        {!canOverride && (
+        {!canOverride && !showCampaignSwitch && (
           <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             This lead cannot be resubmitted right now.
           </p>
+        )}
+
+        {showCampaignSwitch && (
+          <div className="mt-6 space-y-4">
+            <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+              This lead is already sold under {existingCampaign || "its current campaign"}.
+              You can resubmit it for a different campaign: PHI or NBN.
+            </p>
+
+            <div>
+              <label className="block mb-2 font-medium">
+                Reason for Override
+              </label>
+
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full border rounded-lg p-3"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              {existingCampaign !== "PHI" && (
+                <button
+                  onClick={() => onSwitchCampaign("PHI")}
+                  className="flex-1 px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Switch to PHI &amp; Resubmit
+                </button>
+              )}
+
+              {existingCampaign !== "NBN" && (
+                <button
+                  onClick={() => onSwitchCampaign("NBN")}
+                  className="flex-1 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Switch to NBN &amp; Resubmit
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {canOverride && (

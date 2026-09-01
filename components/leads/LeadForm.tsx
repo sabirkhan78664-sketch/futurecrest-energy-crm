@@ -9,7 +9,7 @@ import EnergySection from "./EnergySection";
 import PHISection from "./PHISection";
 import NBNSection from "./NBNSection";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -411,6 +411,39 @@ export default function LeadForm({
 
   const canOverrideDuplicate =
     isAdmin || canAgentOverrideDuplicate;
+
+  /* ============================================================
+     SOLD-DUPLICATE CAMPAIGN SWITCH (AGENT)
+
+     "Switch to PHI/NBN" sets the campaign, then waits for that state
+     update to actually land before retrying — calling saveLead() in
+     the same tick would still close over the pre-switch campaign
+     value, since setCampaign() doesn't apply until the next render.
+  ============================================================ */
+
+  // A ref, not state — it only needs to gate the effect below, never to
+  // trigger a render of its own (only the campaign change should do that).
+  const pendingCampaignSwitchRef =
+    useRef<Campaign | null>(null);
+
+  useEffect(() => {
+    if (
+      pendingCampaignSwitchRef.current &&
+      campaign === pendingCampaignSwitchRef.current
+    ) {
+      pendingCampaignSwitchRef.current = null;
+
+      saveLead(true, duplicateReason);
+    }
+  }, [campaign]);
+
+  function switchCampaignAndRetry(
+    newCampaign: "PHI" | "NBN"
+  ) {
+    pendingCampaignSwitchRef.current = newCampaign;
+
+    setCampaign(newCampaign);
+  }
 
   /* ============================================================
      LOAD USERS
@@ -2068,6 +2101,10 @@ setDncr={setDncrNumber}
             canOverrideDuplicate
           }
 
+          isAgent={
+            currentRole === "Agent"
+          }
+
           reason={
             duplicateReason
           }
@@ -2087,6 +2124,10 @@ setDncr={setDncrNumber}
               true,
               duplicateReason
             )
+          }
+
+          onSwitchCampaign={
+            switchCampaignAndRetry
           }
         />
 
