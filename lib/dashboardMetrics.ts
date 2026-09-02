@@ -101,7 +101,7 @@ export async function getDashboardMetrics(
     ),
 
     // =========================
-    // APPROVED BUT NOT ASSIGNED
+    // UNCLAIMED (no closer has taken the lead yet)
     // =========================
     supabase
       .from("leads")
@@ -110,10 +110,10 @@ export async function getDashboardMetrics(
         head: true,
       })
       .eq("approval_status", "Approved")
-      .is("assigned_agent", null),
+      .is("assigned_closer", null),
 
     // =========================
-    // APPROVED AND ASSIGNED
+    // CLAIMED (a closer has taken the lead via Take Lead)
     // =========================
     supabase
       .from("leads")
@@ -122,7 +122,7 @@ export async function getDashboardMetrics(
         head: true,
       })
       .eq("approval_status", "Approved")
-      .not("assigned_agent", "is", null),
+      .not("assigned_closer", "is", null),
 
     // =========================
     // SOLD

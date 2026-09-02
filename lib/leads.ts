@@ -162,9 +162,13 @@ export async function getLeads() {
    * ADMIN / SUPER ADMIN / CLOSER
    *
    * No approval gate — every lead is visible immediately, findable by
-   * these roles as soon as it's submitted.
+   * these roles as soon as it's submitted. Uses the service-role client
+   * like every other branch above: any RLS policy still scoped to a
+   * Closer's own assigned+approved leads (from before the approval gate
+   * was removed) would otherwise silently zero out this list for Closers
+   * browsing the shared Leads page.
    */
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("leads")
     .select(
       `*,
@@ -202,15 +206,12 @@ export async function getLead(id: number) {
     return null;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  const client = profile?.role === "QA" ? adminSupabase : supabase;
-
-  const { data, error } = await client
+  // Callers here are already role-checked by the page (requireRole) —
+  // Admin/Super Admin/QA/Closer. Use the service-role client for all of
+  // them, same reasoning as getLeads(): an RLS policy still scoped to a
+  // Closer's own assigned+approved leads would otherwise silently return
+  // "not found" for a lead a Closer just claimed via Take Lead.
+  const { data, error } = await adminSupabase
     .from("leads")
     .select(
       `*,

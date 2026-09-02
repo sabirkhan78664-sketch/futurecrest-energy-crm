@@ -661,8 +661,8 @@ export default function LeadForm({
         return false;
       }
 
-      if (!/^\d{10}$/.test(nmi.trim())) {
-        alert("NMI must be exactly 10 digits.");
+      if (!/^[A-Za-z0-9]{10}$/.test(nmi.trim())) {
+        alert("NMI must be exactly 10 alphanumeric characters.");
         return false;
       }
 

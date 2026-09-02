@@ -457,8 +457,8 @@ export default async function SuperAdminDashboard({
             />
 
             <BarRow
-              label="Pending"
-              count={metrics.pendingApprovals}
+              label="Unclaimed"
+              count={metrics.unassignedLeads}
               total={metrics.totalLeads}
               barClass="bg-amber-500"
             />

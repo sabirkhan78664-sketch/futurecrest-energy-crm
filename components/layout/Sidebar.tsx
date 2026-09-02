@@ -18,6 +18,7 @@ import {
   MessageSquare,
   ShieldCheck,
   Plus,
+  Search,
 } from "lucide-react";
 
 type MenuItem = {
@@ -304,6 +305,15 @@ export default function Sidebar({
   href: "/closer/sales",
   icon: FileText,
 },
+
+      {
+        // Closers need a way to browse/search unclaimed leads to claim
+        // via Take Lead — without this link there was no navigation
+        // path to /leads at all for the Closer role.
+        name: "Leads",
+        href: "/leads",
+        icon: Search,
+      },
 
       {
         name: "New Lead",
