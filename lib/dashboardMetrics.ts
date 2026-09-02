@@ -67,6 +67,7 @@ export async function getDashboardMetrics(
     assignedResult,
     salesResult,
     qaRejectedResult,
+    rejectedLostResult,
     energyResult,
     phiResult,
     nbnResult,
@@ -103,26 +104,32 @@ export async function getDashboardMetrics(
     // =========================
     // UNCLAIMED (no closer has taken the lead yet)
     // =========================
-    supabase
-      .from("leads")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("approval_status", "Approved")
-      .is("assigned_closer", null),
+    applyPeriod(
+      supabase
+        .from("leads")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("approval_status", "Approved")
+        .is("assigned_closer", null),
+      periodStart
+    ),
 
     // =========================
     // CLAIMED (a closer has taken the lead via Take Lead)
     // =========================
-    supabase
-      .from("leads")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("approval_status", "Approved")
-      .not("assigned_closer", "is", null),
+    applyPeriod(
+      supabase
+        .from("leads")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("approval_status", "Approved")
+        .not("assigned_closer", "is", null),
+      periodStart
+    ),
 
     // =========================
     // SOLD
@@ -155,6 +162,24 @@ export async function getDashboardMetrics(
       })
       .eq("status", "Sold")
       .eq("qa_status", "Rejected"),
+
+    // =========================
+    // REJECTED / LOST
+    // A lead the Closer marked Lost, or one rejected in the approval
+    // workflow — distinct from QA Rejected, which only covers Sold
+    // leads that failed post-sale audit. Bucketed by closed_at, same
+    // as Sold — Lost also sets closed_at when a Closer records it.
+    // =========================
+    applyClosedPeriod(
+      supabase
+        .from("leads")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .or("status.eq.Lost,approval_status.eq.Rejected"),
+      periodStart
+    ),
 
     // =========================
     // LEADS BY CAMPAIGN
@@ -266,6 +291,13 @@ export async function getDashboardMetrics(
     );
   }
 
+  if (rejectedLostResult.error) {
+    console.error(
+      "DASHBOARD REJECTED / LOST ERROR:",
+      rejectedLostResult.error
+    );
+  }
+
   if (energyResult.error) {
     console.error(
       "DASHBOARD ENERGY LEADS ERROR:",
@@ -322,6 +354,9 @@ export async function getDashboardMetrics(
 
   const qaRejected =
     qaRejectedResult.count ?? 0;
+
+  const rejectedLost =
+    rejectedLostResult.count ?? 0;
 
   const energyLeads =
     energyResult.count ?? 0;
@@ -501,6 +536,7 @@ export async function getDashboardMetrics(
     conversionRate,
     topAgents,
     qaRejected,
+    rejectedLost,
     energyLeads,
     phiLeads,
     nbnLeads,

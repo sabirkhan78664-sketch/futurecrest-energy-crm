@@ -465,7 +465,7 @@ export default async function SuperAdminDashboard({
 
             <BarRow
               label="Rejected / Lost"
-              count={metrics.qaRejected}
+              count={metrics.rejectedLost}
               total={metrics.totalLeads}
               barClass="bg-red-500"
             />

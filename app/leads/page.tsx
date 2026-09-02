@@ -208,10 +208,15 @@ export default async function LeadsPage({
         lead.assigned_closer || ""
       );
 
-      return (
+      const isMine =
         assignedCloserId === userId ||
-        assignedCloserId === empId
-      );
+        assignedCloserId === empId;
+
+      const isUnclaimed =
+        !lead.assigned_closer &&
+        lead.approval_status === "Approved";
+
+      return isMine || isUnclaimed;
     }
 
     return false;
@@ -471,53 +476,6 @@ export default async function LeadsPage({
           .toLowerCase() === "lost"
     ).length;
 
-  console.log(
-    "========================================"
-  );
-
-  console.log(
-    "AGENT / LEADS DASHBOARD"
-  );
-
-  console.log(
-    "User:",
-    profile.full_name
-  );
-
-  console.log(
-    "Role:",
-    profile.role
-  );
-
-  console.log(
-    "Total:",
-    totalLeads
-  );
-
-  console.log(
-    "Today's:",
-    todayLeads
-  );
-
-  console.log(
-    "Sold:",
-    sales
-  );
-
-  console.log(
-    "Follow-ups:",
-    followups
-  );
-
-  console.log(
-    "Rejected:",
-    rejected
-  );
-
-  console.log(
-    "========================================"
-  );
-
   // ============================================================
   // 11. PAGE
   // ============================================================
@@ -530,9 +488,10 @@ export default async function LeadsPage({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              {profile.role === "Agent" ||
-              profile.role === "Closer" ||
-              profile.role === "Channel Partner"
+              {profile.role === "Closer"
+                ? "Leads"
+                : profile.role === "Agent" ||
+                  profile.role === "Channel Partner"
                 ? "My Leads"
                 : "Lead Management"}
             </h1>
