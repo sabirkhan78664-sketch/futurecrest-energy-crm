@@ -39,6 +39,16 @@ function mapLead(row: any, generatedLeadId: string | null, userId: string) {
   const status = clean(row.status) || "Sold";
   const isSold = status === "Sold";
 
+  // Every dashboard metric buckets by closed_at, not status or
+  // created_at — an imported Sold/Lost row with no closed_at would be
+  // silently invisible on the dashboard forever. Respects an explicit
+  // closed_at column if the CSV provides one.
+  const closedAt =
+    clean(row.closed_at) ||
+    (status === "Sold" || status === "Lost"
+      ? new Date().toISOString()
+      : null);
+
   return {
     lead_id: clean(row.lead_id) || generatedLeadId,
     title: clean(row.title) || null,
@@ -65,6 +75,7 @@ function mapLead(row: any, generatedLeadId: string | null, userId: string) {
     assignment_status:
       clean(row.assigned_closer) ? "Assigned" : "Unassigned",
     qa_status: isSold ? "Not Audited" : "Not Required",
+    closed_at: closedAt,
     created_by: userId,
     approved_by: userId,
     approved_at: new Date().toISOString(),

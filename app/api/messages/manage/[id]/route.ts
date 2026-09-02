@@ -3,6 +3,7 @@ import { adminSupabase } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 async function admin(){const s=await createSupabaseServerClient();const {data:{user}}=await s.auth.getUser();if(!user)return null;const {data}=await adminSupabase.from("profiles").select("*").eq("id",user.id).single();return data&&["Admin","Super Admin"].includes(data.role)?data:null;}
 async function me(){const s=await createSupabaseServerClient();const {data:{user}}=await s.auth.getUser();if(!user)return null;const {data}=await adminSupabase.from("profiles").select("*").eq("id",user.id).single();return data;}
+async function allowed(group_id:string,user_id:string){const {data}=await adminSupabase.from("crm_chat_group_members").select("group_id").eq("group_id",group_id).eq("user_id",user_id).maybeSingle();return !!data;}
 export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){
   const p=await me();
   if(!p)return NextResponse.json({message:"Unauthorized"},{status:401});
@@ -10,9 +11,13 @@ export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>
   const body=await req.json();
   const emoji=String(body.emoji||"");
   if(!emoji)return NextResponse.json({message:"emoji is required"},{status:400});
-  const {data:existing,error:fetchError}=await adminSupabase.from("crm_messages").select("reactions").eq("id",id).maybeSingle();
+  const {data:existing,error:fetchError}=await adminSupabase.from("crm_messages").select("reactions,sender_id,receiver_id,group_id").eq("id",id).maybeSingle();
   if(fetchError)return NextResponse.json({message:fetchError.message},{status:400});
   if(!existing)return NextResponse.json({message:"Message not found"},{status:404});
+  const isParticipant = existing.group_id
+    ? await allowed(existing.group_id, p.id)
+    : existing.sender_id === p.id || existing.receiver_id === p.id;
+  if(!isParticipant)return NextResponse.json({message:"You don't have access to this message."},{status:403});
   const reactions:Record<string,string[]> = existing.reactions && typeof existing.reactions==="object" ? existing.reactions : {};
   const current = Array.isArray(reactions[emoji]) ? reactions[emoji] : [];
   const updated:Record<string,string[]> = {...reactions};

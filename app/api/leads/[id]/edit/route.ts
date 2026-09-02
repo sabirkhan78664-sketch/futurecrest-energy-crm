@@ -82,6 +82,20 @@ export async function PATCH(
       }
     }
 
+    // Every dashboard metric buckets by closed_at, not status or
+    // created_at — mirrors the Closer's Process Lead save path
+    // (app/api/closer/sales/[id]/route.ts) so a lead marked Sold/Lost
+    // through this general edit form actually counts on the dashboard.
+    // Skipped if the caller already sent their own closed_at, so an
+    // explicit backdate/correction is respected.
+    if ("status" in body && !("closed_at" in body)) {
+      if (body.status === "Sold" || body.status === "Lost") {
+        body.closed_at = new Date().toISOString();
+      } else if (body.status === "Follow-up") {
+        body.closed_at = null;
+      }
+    }
+
     const { data, error } = await adminSupabase
       .from("leads")
       .update(body)
