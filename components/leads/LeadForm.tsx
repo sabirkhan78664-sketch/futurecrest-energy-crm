@@ -28,6 +28,15 @@ interface LeadFormProps {
   // Lead Disposition section doesn't flash in/out while that fetch is
   // still in flight.
   canProcessLead?: boolean;
+  // Optional server-known role, e.g. currentRole={profile.role} from the
+  // edit page. Seeds the internal currentRole state below so
+  // canReassign/isAdmin are correct from the very first paint instead of
+  // starting false (which briefly disabled the Assigned Agent/Closer
+  // dropdowns for Admin/Super Admin) until LeadForm's own client-side
+  // role fetch resolves. The internal fetch still runs and remains the
+  // source of truth everywhere else in this file — this only affects the
+  // initial value.
+  currentRole?: string;
 }
 
 type Campaign = "Energy" | "PHI" | "NBN";
@@ -40,6 +49,7 @@ export default function LeadForm({
   agentName,
   setAgentName,
   canProcessLead = false,
+  currentRole: currentRoleProp,
 }: LeadFormProps) {
   const router = useRouter();
 
@@ -342,7 +352,7 @@ export default function LeadForm({
     useState("");
 
   const [currentRole, setCurrentRole] =
-    useState("");
+    useState(currentRoleProp || "");
 
   /* ============================================================
      DUPLICATE
@@ -367,6 +377,55 @@ export default function LeadForm({
   const isAdmin =
     currentRole === "Admin" ||
     currentRole === "Super Admin";
+
+  // A lead's current assigned_agent/assigned_closer can point to a user
+  // who is no longer role=Agent/role=Closer or status=Active (a role
+  // change, deactivation, etc.) — that person then wouldn't be in the
+  // filtered agents/closers lists above, and the <select> would show
+  // blank instead of their name. If that's happened, add them back in
+  // as the one already-selected option (using the name/employee_id
+  // already enriched onto initialData by getLead()) so the current
+  // assignment still displays correctly — this never adds anyone else,
+  // so no other invalid-role user becomes newly selectable.
+  const agentOptions =
+    assignedAgent &&
+    !agents.some(
+      (person: any) => person.id === assignedAgent
+    )
+      ? [
+          ...agents,
+          {
+            id: assignedAgent,
+            full_name:
+              (initialData?.agent ||
+                initialData?.assignedAgent)
+                ?.full_name ||
+              "Previously assigned user",
+            employee_id:
+              (initialData?.agent ||
+                initialData?.assignedAgent)
+                ?.employee_id || null,
+          },
+        ]
+      : agents;
+
+  const closerOptions =
+    assignedCloser &&
+    !closers.some(
+      (person: any) => person.id === assignedCloser
+    )
+      ? [
+          ...closers,
+          {
+            id: assignedCloser,
+            full_name:
+              initialData?.closer?.full_name ||
+              "Previously assigned user",
+            employee_id:
+              initialData?.closer?.employee_id || null,
+          },
+        ]
+      : closers;
 
   // Mirrors the Agent/Closer override rules enforced server-side in
   // app/api/leads/route.ts — this only decides whether to show the
@@ -482,7 +541,7 @@ export default function LeadForm({
       error: agentError,
     } = await supabase
       .from("profiles")
-      .select("id, full_name, employee_id")
+      .select("id, full_name, employee_id, role")
       .eq("role", "Agent")
       .eq("status", "Active")
       .order("full_name", {
@@ -501,7 +560,7 @@ export default function LeadForm({
       error: closerError,
     } = await supabase
       .from("profiles")
-      .select("id, full_name, employee_id")
+      .select("id, full_name, employee_id, role")
       .eq("role", "Closer")
       .eq("status", "Active")
       .order("full_name", {
@@ -515,8 +574,20 @@ export default function LeadForm({
       );
     }
 
-    setAgents(agentData || []);
-    setClosers(closerData || []);
+    // Belt-and-suspenders: re-check the actual role field client-side
+    // rather than trusting the query filter alone, so the Assigned
+    // Agent/Closer dropdowns can never show a non-Agent/non-Closer user.
+    setAgents(
+      (agentData || []).filter(
+        (person: any) => person.role === "Agent"
+      )
+    );
+
+    setClosers(
+      (closerData || []).filter(
+        (person: any) => person.role === "Closer"
+      )
+    );
   }
 
   async function loadCurrentUser() {
@@ -2031,11 +2102,11 @@ setDncr={setDncrNumber}
         {!hideAssignment && (
           <AssignmentSection
             agents={
-              agents
+              agentOptions
             }
 
             closers={
-              closers
+              closerOptions
             }
 
             assignedAgent={

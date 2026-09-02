@@ -34,6 +34,7 @@ export default async function EditLeadPage({ params }: Props) {
           initialData={lead}
           isEdit
           canProcessLead={canProcessLead}
+          currentRole={profile.role}
         />
       </div>
     </MainLayout>
