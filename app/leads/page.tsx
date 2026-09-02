@@ -5,6 +5,7 @@ import { getCurrentUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getZonedTodayStart } from "@/lib/timezone";
 import {
   FileText,
   CalendarDays,
@@ -26,7 +27,9 @@ function getPeriodStart(period: string): Date | null {
   const now = new Date();
 
   if (period === "today") {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Evaluated in the business's own timezone, not the server
+    // runtime's (UTC on Vercel) — see lib/timezone.ts.
+    return getZonedTodayStart("Asia/Kolkata");
   }
 
   if (period === "week") {
@@ -49,6 +52,36 @@ const PERIOD_LABELS: Record<string, string> = {
   week: "This week",
   month: "This month",
 };
+
+const PERIOD_TABS: { key: string; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "week", label: "This week" },
+  { key: "month", label: "This month" },
+  { key: "all", label: "All time" },
+];
+
+// Switching period must not drop the other active filters (search,
+// status, campaign) — same idea as the Dashboard's period tabs, just
+// carrying more query params through.
+function buildPeriodHref(
+  tabKey: string,
+  current: {
+    search?: string;
+    status?: string;
+    campaign?: string;
+  }
+) {
+  const params = new URLSearchParams();
+
+  if (current.search) params.set("search", current.search);
+  if (current.status) params.set("status", current.status);
+  if (current.campaign) params.set("campaign", current.campaign);
+  if (tabKey !== "all") params.set("period", tabKey);
+
+  const query = params.toString();
+
+  return `/leads${query ? `?${query}` : ""}`;
+}
 
 export default async function LeadsPage({
   searchParams,
@@ -437,15 +470,24 @@ export default async function LeadsPage({
   const totalLeads =
     allPermittedLeads.length;
 
-  const today = new Date()
-    .toISOString()
-    .split("T")[0];
+  // Evaluated in the business's own timezone (Asia/Kolkata, same
+  // convention as app/my-leads/page.tsx) — toISOString() is always UTC,
+  // which on Vercel (UTC server runtime) silently used the wrong
+  // calendar day for part of each IST day.
+  const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const today = dayFormatter.format(new Date());
 
   const todayLeads =
     allPermittedLeads.filter(
       (lead: any) =>
         lead.created_at &&
-        String(lead.created_at).startsWith(today)
+        dayFormatter.format(new Date(lead.created_at)) === today
     ).length;
 
   // ============================================================
@@ -547,12 +589,45 @@ export default async function LeadsPage({
             )}
           </div>
 
-          <Link
-            href="/leads/new"
-            className="rounded-lg bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-700"
-          >
-            + New Lead
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+
+              {PERIOD_TABS.map((tab) => {
+                const isActive =
+                  tab.key === "all"
+                    ? !periodFilter
+                    : periodFilter === tab.key;
+
+                return (
+                  <Link
+                    key={tab.key}
+                    href={buildPeriodHref(tab.key, {
+                      search: searchQuery,
+                      status: statusFilter,
+                      campaign: campaignFilter,
+                    })}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {tab.label}
+                  </Link>
+                );
+              })}
+
+            </div>
+
+            <Link
+              href="/leads/new"
+              className="rounded-lg bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-700"
+            >
+              + New Lead
+            </Link>
+
+          </div>
         </div>
 
         {/* =====================================================

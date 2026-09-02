@@ -1,4 +1,5 @@
 import { adminSupabase } from "@/lib/admin";
+import { getZonedTodayStart } from "@/lib/timezone";
 
 // =========================
 // PERIOD FILTER
@@ -8,13 +9,9 @@ function getPeriodStart(period: string): string | null {
   const now = new Date();
 
   if (period === "today") {
-    const start = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-
-    return start.toISOString();
+    return getZonedTodayStart(
+      "Asia/Kolkata"
+    ).toISOString();
   }
 
   if (period === "week") {
@@ -487,27 +484,41 @@ export async function getDashboardMetrics(
   // =========================
   // SALES TREND (last 14 days)
   // =========================
+  // Day keys are bucketed in the business's own timezone (Asia/Kolkata),
+  // not the UTC date slice() previously pulled straight off the raw
+  // timestamp — a sale closed during IST's morning would otherwise be
+  // attributed to the previous UTC day, showing up a day early.
+
+  const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 
   const salesByDay: Record<string, number> = {};
 
   for (const lead of salesTrendResult.data || []) {
     if (!lead.closed_at) continue;
 
-    const day = lead.closed_at.slice(0, 10);
+    const day = dayKeyFormatter.format(
+      new Date(lead.closed_at)
+    );
     salesByDay[day] = (salesByDay[day] || 0) + 1;
   }
 
   const salesTrend = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
-    const date = d.toISOString().slice(0, 10);
+    const date = dayKeyFormatter.format(d);
 
     return {
       date,
       label: d.toLocaleDateString("en-AU", {
         weekday: "short",
+        timeZone: "Asia/Kolkata",
       }),
-      dayNum: d.getDate(),
+      dayNum: Number(date.slice(8, 10)),
       isToday: i === 13,
       count: salesByDay[date] || 0,
     };

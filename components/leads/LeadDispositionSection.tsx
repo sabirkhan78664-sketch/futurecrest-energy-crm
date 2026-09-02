@@ -33,6 +33,7 @@ type Outcome =
 interface DispositionLeadPerson {
   full_name?: string | null;
   employee_id?: string | null;
+  username?: string | null;
 }
 
 interface DispositionLead {
@@ -48,6 +49,10 @@ interface DispositionLead {
   comments?: string | null;
   agent?: DispositionLeadPerson | null;
   assignedAgent?: DispositionLeadPerson | null;
+  // Text-only fallback for Channel Partner submissions, which have no
+  // profile-linked creator (see app/api/partner/submit/route.ts).
+  agent_name?: string | null;
+  creator?: DispositionLeadPerson | null;
   closer?: DispositionLeadPerson | null;
 }
 
@@ -246,7 +251,16 @@ export default function LeadDispositionSection({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const agent = lead.agent || lead.assignedAgent || null;
+  // Same priority as the Agent column elsewhere (e.g. LeadTable.tsx):
+  // creator (created_by) first, then the assigned_agent FK embed, then
+  // the plain-text agent_name Channel Partner submissions use instead
+  // of a profile-linked creator.
+  const agent =
+    lead.creator ||
+    lead.agent ||
+    lead.assignedAgent ||
+    (lead.agent_name ? { full_name: lead.agent_name } : null);
+
   const owner = lead.closer || null;
 
   async function submitOutcome() {
