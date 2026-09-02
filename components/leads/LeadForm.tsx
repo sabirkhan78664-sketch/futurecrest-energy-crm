@@ -379,32 +379,41 @@ export default function LeadForm({
     currentRole === "Super Admin";
 
   // A lead's current assigned_agent/assigned_closer can point to a user
-  // who is no longer role=Agent/role=Closer or status=Active (a role
-  // change, deactivation, etc.) — that person then wouldn't be in the
-  // filtered agents/closers lists above, and the <select> would show
-  // blank instead of their name. If that's happened, add them back in
-  // as the one already-selected option (using the name/employee_id
-  // already enriched onto initialData by getLead()) so the current
-  // assignment still displays correctly — this never adds anyone else,
-  // so no other invalid-role user becomes newly selectable.
+  // who is no longer status=Active (deactivated) or whose role changed
+  // AWAY FROM Agent/Channel Partner or Closer respectively — that
+  // person then wouldn't be in the filtered agents/closers lists above,
+  // and the <select> would show blank instead of their name. If that's
+  // happened, add them back in as the one already-selected option
+  // (using the name/employee_id already enriched onto initialData by
+  // getLead()) so the current assignment still displays correctly.
+  //
+  // Gated on the person's actual current role (now available via
+  // enrichLeadPeople) so this only ever restores a genuine legacy
+  // Agent/Channel Partner/Closer. It must NOT restore an Admin or Super
+  // Admin who took the lead via Take Lead (assigned_closer set to their
+  // own id, but role=Admin) — permission to reassign a lead and
+  // eligibility to appear in these dropdowns are separate; Admin/Super
+  // Admin are correctly represented on the Current Lead Team card
+  // instead, not here.
+  const assignedAgentPerson =
+    initialData?.assignedAgent || initialData?.agent;
+
   const agentOptions =
     assignedAgent &&
     !agents.some(
       (person: any) => person.id === assignedAgent
-    )
+    ) &&
+    (assignedAgentPerson?.role === "Agent" ||
+      assignedAgentPerson?.role === "Channel Partner")
       ? [
           ...agents,
           {
             id: assignedAgent,
             full_name:
-              (initialData?.agent ||
-                initialData?.assignedAgent)
-                ?.full_name ||
+              assignedAgentPerson?.full_name ||
               "Previously assigned user",
             employee_id:
-              (initialData?.agent ||
-                initialData?.assignedAgent)
-                ?.employee_id || null,
+              assignedAgentPerson?.employee_id || null,
           },
         ]
       : agents;
@@ -413,7 +422,8 @@ export default function LeadForm({
     assignedCloser &&
     !closers.some(
       (person: any) => person.id === assignedCloser
-    )
+    ) &&
+    initialData?.closer?.role === "Closer"
       ? [
           ...closers,
           {
@@ -536,13 +546,18 @@ export default function LeadForm({
   }, []);
 
   async function loadUsers() {
+    // Assigned Agent also includes Channel Partner — assigned_agent is
+    // the same field getLeads() already uses to decide Channel Partner
+    // lead visibility (.or(`assigned_agent.eq.${id},created_by.eq.${id}`)),
+    // so Channel Partner users must be selectable here for that
+    // visibility mechanism to actually be usable from the edit form.
     const {
       data: agentData,
       error: agentError,
     } = await supabase
       .from("profiles")
       .select("id, full_name, employee_id, role")
-      .eq("role", "Agent")
+      .in("role", ["Agent", "Channel Partner"])
       .eq("status", "Active")
       .order("full_name", {
         ascending: true,
@@ -576,10 +591,13 @@ export default function LeadForm({
 
     // Belt-and-suspenders: re-check the actual role field client-side
     // rather than trusting the query filter alone, so the Assigned
-    // Agent/Closer dropdowns can never show a non-Agent/non-Closer user.
+    // Agent/Closer dropdowns can never show a user outside their
+    // intended role set.
     setAgents(
       (agentData || []).filter(
-        (person: any) => person.role === "Agent"
+        (person: any) =>
+          person.role === "Agent" ||
+          person.role === "Channel Partner"
       )
     );
 

@@ -94,6 +94,30 @@ function PersonSummary({
 }
 
 /* ============================================================
+   READ-ONLY FIELD (closed lead — saved disposition data)
+============================================================ */
+
+function ReadOnlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-1 text-sm font-semibold text-slate-800">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+/* ============================================================
    OUTCOME BUTTON
 ============================================================ */
 
@@ -386,10 +410,46 @@ export default function LeadDispositionSection({
         </div>
 
         {isClosed ? (
-          <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            <AlertCircle size={18} className="shrink-0 text-slate-400" />
-            This lead has already been closed ({lead.status}) and cannot
-            be reopened here.
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <AlertCircle size={18} className="shrink-0 text-slate-400" />
+              This lead has already been closed as{" "}
+              <strong className="font-semibold text-slate-800">
+                {lead.status}
+              </strong>{" "}
+              and cannot be reopened here.
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <ReadOnlyField label="Client Lead ID" value={clId} />
+              <ReadOnlyField label="Channel Name" value={channelName} />
+
+              {lead.status === "Sold" && (
+                <>
+                  <ReadOnlyField
+                    label="Final Retailer"
+                    value={offeredRetailer}
+                  />
+                  <ReadOnlyField label="Fuel Type" value={fuelType} />
+                  <ReadOnlyField
+                    label="Campaign"
+                    value={dispositionCampaign}
+                  />
+                </>
+              )}
+            </div>
+
+            {comments && (
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Comments
+                </p>
+
+                <p className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-700">
+                  {comments}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <>

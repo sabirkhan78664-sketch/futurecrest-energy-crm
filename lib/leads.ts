@@ -37,7 +37,7 @@ async function enrichLeadPeople(rows: any[]) {
 
   const { data: people, error } = await adminSupabase
     .from("profiles")
-    .select("id, employee_id, full_name, username")
+    .select("id, employee_id, full_name, username, role")
     .in("id", allIds);
 
   if (error) {
