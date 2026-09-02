@@ -395,11 +395,21 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     | SOLD / LOST CANNOT BE REOPENED
     |--------------------------------------------------------------------------
+    | ...except by Admin/Super Admin, who are allowed to reopen a closed
+    | lead and record a new outcome. A Closer (including one who owns a
+    | now-closed lead) still cannot.
+    |--------------------------------------------------------------------------
     */
 
+    const canReopenClosedLead = [
+      "Admin",
+      "Super Admin",
+    ].includes(profile.role);
+
     if (
-      existingLead.status === "Sold" ||
-      existingLead.status === "Lost"
+      !canReopenClosedLead &&
+      (existingLead.status === "Sold" ||
+        existingLead.status === "Lost")
     ) {
       return NextResponse.json(
         {
@@ -491,6 +501,14 @@ export async function PATCH(
 
       channel_name:
         body?.channel_name || null,
+
+      // Defaults to null; the Sold/Lost blocks below override this with
+      // a fresh timestamp. Needed so that when Admin/Super Admin reopens
+      // a closed lead and picks a non-terminal outcome (Interested,
+      // Processing, No Answer, Internal DNC, NGTG), the stale closed_at
+      // from the previous Sold/Lost doesn't linger on the record.
+      closed_at:
+        null,
     };
 
     /*

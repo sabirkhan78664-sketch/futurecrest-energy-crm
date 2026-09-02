@@ -94,30 +94,6 @@ function PersonSummary({
 }
 
 /* ============================================================
-   READ-ONLY FIELD (closed lead — saved disposition data)
-============================================================ */
-
-function ReadOnlyField({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-semibold text-slate-800">
-        {value || "-"}
-      </p>
-    </div>
-  );
-}
-
-/* ============================================================
    OUTCOME BUTTON
 ============================================================ */
 
@@ -409,50 +385,26 @@ export default function LeadDispositionSection({
           </p>
         </div>
 
-        {isClosed ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              <AlertCircle size={18} className="shrink-0 text-slate-400" />
-              This lead has already been closed as{" "}
-              <strong className="font-semibold text-slate-800">
-                {lead.status}
-              </strong>{" "}
-              and cannot be reopened here.
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ReadOnlyField label="Client Lead ID" value={clId} />
-              <ReadOnlyField label="Channel Name" value={channelName} />
-
-              {lead.status === "Sold" && (
-                <>
-                  <ReadOnlyField
-                    label="Final Retailer"
-                    value={offeredRetailer}
-                  />
-                  <ReadOnlyField label="Fuel Type" value={fuelType} />
-                  <ReadOnlyField
-                    label="Campaign"
-                    value={dispositionCampaign}
-                  />
-                </>
-              )}
-            </div>
-
-            {comments && (
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Comments
-                </p>
-
-                <p className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-700">
-                  {comments}
-                </p>
+        {/*
+          This section only ever renders for Admin/Super Admin — the
+          parent (LeadForm) gates it on canProcessLead, which already
+          requires that role. Closer processes leads through their own
+          separate page (app/closer/sales/[id]/page.tsx) and never
+          reaches this component, so unlike that page, a closed lead
+          here doesn't block re-selecting an outcome — Admin/Super Admin
+          can reopen it. The server enforces the same Admin/Super
+          Admin-only exception (app/api/closer/sales/[id]/route.ts).
+        */}
+        <>
+            {isClosed && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <AlertCircle size={18} className="shrink-0 text-amber-500" />
+                This lead is currently closed as{" "}
+                <strong className="font-semibold">{lead.status}</strong>.
+                Selecting and saving a new outcome below will reopen it.
               </div>
             )}
-          </div>
-        ) : (
-          <>
+
             {error && (
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <AlertCircle size={16} />
@@ -711,8 +663,7 @@ export default function LeadDispositionSection({
                 )}
               </button>
             </div>
-          </>
-        )}
+        </>
 
       </section>
 
