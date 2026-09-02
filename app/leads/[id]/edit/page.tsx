@@ -15,6 +15,12 @@ export default async function EditLeadPage({ params }: Props) {
 
   if (!lead) notFound();
 
+  // Admin/Super Admin can process (disposition) this lead only when
+  // they're the one who currently owns it via Take Lead.
+  const canProcessLead =
+    ["Admin", "Super Admin"].includes(profile.role) &&
+    lead.assigned_closer === profile.id;
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -24,7 +30,11 @@ export default async function EditLeadPage({ params }: Props) {
             Update {lead.lead_id} · {profile.role}
           </p>
         </div>
-        <LeadForm initialData={lead} isEdit />
+        <LeadForm
+          initialData={lead}
+          isEdit
+          canProcessLead={canProcessLead}
+        />
       </div>
     </MainLayout>
   );

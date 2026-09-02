@@ -49,7 +49,9 @@ function cleanString(value: unknown) {
 |--------------------------------------------------------------------------
 | GET
 |--------------------------------------------------------------------------
-| Load one lead assigned to the logged-in Closer.
+| Load one lead assigned to (owned by) the logged-in Closer, Admin, or
+| Super Admin — ownership (assigned_closer === profile.id) is what's
+| checked below, not role alone.
 |--------------------------------------------------------------------------
 */
 
@@ -88,11 +90,16 @@ export async function GET(
       );
     }
 
-    if (profile.role !== "Closer") {
+    if (
+      !["Closer", "Admin", "Super Admin"].includes(
+        profile.role
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Closer access required.",
+          message:
+            "Closer, Admin, or Super Admin access required.",
         },
         { status: 403 }
       );
@@ -185,9 +192,14 @@ export async function GET(
 |--------------------------------------------------------------------------
 | PATCH
 |--------------------------------------------------------------------------
-| Closer can ONLY process an outcome:
+| Closer, Admin, or Super Admin can ONLY process an outcome here:
 |
 | Sold, Interested, Processing, No Answer, Follow-up, Lost, Internal DNC
+|
+| Whoever calls this must currently own the lead — assigned_closer must
+| equal their own profile id, checked below regardless of role. An
+| Admin/Super Admin does not get a role-based bypass: taking a lead via
+| Take Lead is what makes them the owner, same as a Closer.
 |
 | General lead editing goes through /api/leads/[id]/edit instead.
 |--------------------------------------------------------------------------
@@ -228,11 +240,16 @@ export async function PATCH(
       );
     }
 
-    if (profile.role !== "Closer") {
+    if (
+      !["Closer", "Admin", "Super Admin"].includes(
+        profile.role
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Closer access required.",
+          message:
+            "Closer, Admin, or Super Admin access required.",
         },
         { status: 403 }
       );

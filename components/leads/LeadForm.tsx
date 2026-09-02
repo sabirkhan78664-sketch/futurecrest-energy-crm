@@ -8,6 +8,7 @@ import CustomerSection from "./CustomerSection";
 import EnergySection from "./EnergySection";
 import PHISection from "./PHISection";
 import NBNSection from "./NBNSection";
+import LeadDispositionSection from "./LeadDispositionSection";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,13 @@ interface LeadFormProps {
   hideAssignment?: boolean;
   agentName?: string;
   setAgentName?: (value: string) => void;
+  // Admin/Super Admin only: true when this lead's assigned_closer is the
+  // current user, i.e. they took it via Take Lead. Computed server-side
+  // by the edit page (which already has profile.id/profile.role) rather
+  // than derived from LeadForm's own client-side role fetch below, so the
+  // Lead Disposition section doesn't flash in/out while that fetch is
+  // still in flight.
+  canProcessLead?: boolean;
 }
 
 type Campaign = "Energy" | "PHI" | "NBN";
@@ -31,6 +39,7 @@ export default function LeadForm({
   hideAssignment = false,
   agentName,
   setAgentName,
+  canProcessLead = false,
 }: LeadFormProps) {
   const router = useRouter();
 
@@ -2091,6 +2100,20 @@ setDncr={setDncrNumber}
             setCallbackTime
           }
         />
+
+        {/* ======================================================
+            LEAD DISPOSITION (Admin/Super Admin only, and only when
+            they currently own the lead via Take Lead) — canProcessLead
+            is computed server-side by the edit page from profile.role
+            and already encodes the Admin/Super Admin check, so it's
+            not re-checked against LeadForm's own (async, client-side)
+            currentRole here — doing so would only reintroduce a flash
+            while that fetch is still in flight.
+        ====================================================== */}
+
+        {isEdit && canProcessLead && (
+          <LeadDispositionSection lead={initialData} />
+        )}
 
         {/* ======================================================
             DUPLICATE MODAL
