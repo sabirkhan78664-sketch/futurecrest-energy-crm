@@ -12,6 +12,7 @@ interface AssignmentSectionProps {
   setStatus: (value: string) => void;
 
   isAgent: boolean;
+  canReassign: boolean;
 }
 
 export default function AssignmentSection({
@@ -24,7 +25,10 @@ export default function AssignmentSection({
   status,
   setStatus,
   isAgent,
+  canReassign,
 }: AssignmentSectionProps) {
+  const assignmentLocked = isAgent || !canReassign;
+
   return (
     <section>
       <h2 className="mb-6 text-lg font-semibold">
@@ -43,7 +47,7 @@ export default function AssignmentSection({
           <select
             value={assignedAgent}
             onChange={(e) => setAssignedAgent(e.target.value)}
-            disabled={isAgent}
+            disabled={assignmentLocked}
             className="h-11 w-full rounded-xl border px-4 disabled:bg-slate-100 disabled:text-slate-500"
           >
             <option value="">Select Agent</option>
@@ -63,6 +67,12 @@ export default function AssignmentSection({
               Agent assignment is automatic.
             </p>
           )}
+
+          {!isAgent && !canReassign && (
+            <p className="mt-1 text-xs text-slate-500">
+              Only Admin or Super Admin can reassign this lead.
+            </p>
+          )}
         </div>
 
         {/* Assigned Closer */}
@@ -75,7 +85,7 @@ export default function AssignmentSection({
           <select
             value={assignedCloser}
             onChange={(e) => setAssignedCloser(e.target.value)}
-            disabled={isAgent}
+            disabled={assignmentLocked}
             className="h-11 w-full rounded-xl border px-4 disabled:bg-slate-100 disabled:text-slate-500"
           >
             <option value="">
@@ -95,6 +105,12 @@ export default function AssignmentSection({
           {isAgent && (
             <p className="mt-1 text-xs text-slate-500">
               A closer can claim this lead via Take Lead once submitted.
+            </p>
+          )}
+
+          {!isAgent && !canReassign && (
+            <p className="mt-1 text-xs text-slate-500">
+              Only Admin or Super Admin can reassign this lead.
             </p>
           )}
         </div>

@@ -65,6 +65,33 @@ export async function PATCH(
       delete body[key];
     }
 
+    // REASSIGNMENT — only Admin/Super Admin may change who a lead is
+    // assigned to. Strip both fields for anyone else so the request
+    // still saves everything else about the lead, it just has no
+    // effect on assignment.
+    if (!isAdmin) {
+      delete body.assigned_agent;
+      delete body.assigned_closer;
+    }
+
+    // Reassigning to a different Closer needs the same bookkeeping the
+    // approval workflow already sets when it assigns a closer, otherwise
+    // the lead ends up with a new assigned_closer next to a stale
+    // assigned_at/assigned_by from whoever had it before.
+    if (isAdmin && "assigned_closer" in body) {
+      const { data: currentLead } = await adminSupabase
+        .from("leads")
+        .select("assigned_closer")
+        .eq("id", leadId)
+        .maybeSingle();
+
+      if (currentLead && currentLead.assigned_closer !== (body.assigned_closer || null)) {
+        body.assignment_status = body.assigned_closer ? "Assigned" : "Unassigned";
+        body.assigned_at = body.assigned_closer ? new Date().toISOString() : null;
+        body.assigned_by = body.assigned_closer ? profile.id : null;
+      }
+    }
+
     // Postgres date/time columns reject an empty string ("" is not a
     // valid date) — every caller of this route (the admin LeadForm edit,
     // the Closer's Process Lead save, etc.) builds its form state with

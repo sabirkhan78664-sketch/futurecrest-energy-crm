@@ -2058,6 +2058,11 @@ setDncr={setDncrNumber}
                 "Agent" ||
               !!submitOverride
             }
+
+            canReassign={
+              currentRole === "Admin" ||
+              currentRole === "Super Admin"
+            }
           />
         )}
 
