@@ -182,79 +182,49 @@ export default function MainLayout({
 
       /*
        * ========================================================
-       * PENDING APPROVAL
+       * SIDEBAR STATS (Pending Approval / QA Pending)
+       *
+       * Computed server-side via the service-role client — a client
+       * component can never safely hold that key, and querying `leads`
+       * directly here with the browser client carries the same
+       * leftover-RLS risk already fixed in getPendingApprovals() and
+       * getDashboardMetrics().
        * ========================================================
        */
 
       let pendingApproval = 0;
-
-      if (
-        loadedProfile.role === "Admin" ||
-        loadedProfile.role === "Super Admin"
-      ) {
-        const {
-          count,
-          error,
-        } = await supabase
-          .from("leads")
-          .select("id", {
-            count: "exact",
-            head: true,
-          })
-          .eq(
-            "approval_status",
-            "Pending"
-          );
-
-        if (error) {
-          console.error(
-            "Failed to load pending approvals:",
-            error
-          );
-        } else {
-          pendingApproval =
-            count ?? 0;
-        }
-      }
-
-      /*
-       * ========================================================
-       * QA PENDING
-       * ========================================================
-       */
-
       let qaPending = 0;
 
       if (
-        loadedProfile.role === "QA"
+        ["Admin", "Super Admin", "QA"].includes(
+          loadedProfile.role
+        )
       ) {
-        const {
-          count,
-          error: qaError,
-        } = await supabase
-          .from("leads")
-          .select("id", {
-            count: "exact",
-            head: true,
-          })
-          .eq(
-            "status",
-            "Sold"
-          )
-          .not(
-            "qa_status",
-            "in",
-            "(Approved,Rejected)"
+        try {
+          const response = await fetch(
+            "/api/sidebar-stats",
+            { cache: "no-store" }
           );
 
-        if (qaError) {
-          console.error(
-            "Failed to load QA count:",
-            qaError
-          );
-        } else {
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(
+              data.message ||
+                "Unable to load sidebar stats."
+            );
+          }
+
+          pendingApproval =
+            data.pendingApproval ?? 0;
+
           qaPending =
-            count ?? 0;
+            data.qaPending ?? 0;
+        } catch (error) {
+          console.error(
+            "Failed to load sidebar stats:",
+            error
+          );
         }
       }
 

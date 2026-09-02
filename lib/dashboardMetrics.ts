@@ -208,16 +208,16 @@ export async function getDashboardMetrics(
     // =========================
     supabase
       .from("leads")
-      .select("created_at, status, qa_status")
+      .select("closed_at, status, qa_status")
       .eq("status", "Sold")
       .neq("qa_status", "Rejected")
       .gte(
-        "created_at",
+        "closed_at",
         new Date(
           Date.now() - 14 * 24 * 60 * 60 * 1000
         ).toISOString()
       )
-      .order("created_at", { ascending: true }),
+      .order("closed_at", { ascending: true }),
   ]);
 
   // =========================
@@ -456,7 +456,9 @@ export async function getDashboardMetrics(
   const salesByDay: Record<string, number> = {};
 
   for (const lead of salesTrendResult.data || []) {
-    const day = lead.created_at.slice(0, 10);
+    if (!lead.closed_at) continue;
+
+    const day = lead.closed_at.slice(0, 10);
     salesByDay[day] = (salesByDay[day] || 0) + 1;
   }
 
