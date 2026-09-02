@@ -11,6 +11,7 @@ import {
   PhoneCall,
   XCircle,
   ShieldOff,
+  Ban,
   Save,
   Loader2,
   AlertCircle,
@@ -26,6 +27,7 @@ type Outcome =
   | "Lost"
   | "No Answer"
   | "Internal DNC"
+  | "NGTG"
   | "";
 
 interface DispositionLeadPerson {
@@ -113,7 +115,8 @@ function OutcomeButton({
     | "amber"
     | "orange"
     | "red"
-    | "rose";
+    | "rose"
+    | "slate";
 }) {
   const styles = {
     green: {
@@ -164,6 +167,13 @@ function OutcomeButton({
       icon: "bg-rose-200 text-rose-800",
       title: "text-rose-800",
       ring: "ring-rose-300",
+    },
+    slate: {
+      border: "border-slate-300",
+      bg: "bg-slate-50",
+      icon: "bg-slate-200 text-slate-700",
+      title: "text-slate-700",
+      ring: "ring-slate-300",
     },
   };
 
@@ -452,6 +462,14 @@ export default function LeadDispositionSection({
                 icon={<ShieldOff size={16} />}
                 label="Internal DNC"
                 color="rose"
+              />
+
+              <OutcomeButton
+                selected={outcome === "NGTG"}
+                onClick={() => setOutcome("NGTG")}
+                icon={<Ban size={16} />}
+                label="NGTG"
+                color="slate"
               />
             </div>
 

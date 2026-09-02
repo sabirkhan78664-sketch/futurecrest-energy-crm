@@ -142,6 +142,13 @@ function StatusBadge({
         </span>
       );
 
+    case "NGTG":
+      return (
+        <span className="rounded-full bg-slate-300 px-3 py-1 text-xs font-semibold text-slate-800">
+          NGTG
+        </span>
+      );
+
     case "Wrong Number":
       return (
         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">

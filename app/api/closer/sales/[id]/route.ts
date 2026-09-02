@@ -194,7 +194,8 @@ export async function GET(
 |--------------------------------------------------------------------------
 | Closer, Admin, or Super Admin can ONLY process an outcome here:
 |
-| Sold, Interested, Processing, No Answer, Follow-up, Lost, Internal DNC
+| Sold, Interested, Processing, No Answer, Follow-up, Lost, Internal DNC,
+| NGTG
 |
 | Whoever calls this must currently own the lead — assigned_closer must
 | equal their own profile id, checked below regardless of role. An
@@ -378,6 +379,7 @@ export async function PATCH(
         "Follow-up",
         "Lost",
         "Internal DNC",
+        "NGTG",
       ].includes(outcome)
     ) {
       return NextResponse.json(

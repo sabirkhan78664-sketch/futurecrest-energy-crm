@@ -140,6 +140,7 @@ export default function AssignmentSection({
                 <option>Lost</option>
                 <option>No Answer</option>
                 <option>Internal DNC</option>
+                <option>NGTG</option>
                 <option>Rejected</option>
               </>
             )}

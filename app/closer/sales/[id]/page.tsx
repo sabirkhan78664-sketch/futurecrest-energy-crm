@@ -19,6 +19,7 @@ import {
   Clock3,
   ShieldOff,
   XCircle,
+  Ban,
   Save,
   Loader2,
   AlertCircle,
@@ -106,6 +107,7 @@ type Outcome =
   | "Lost"
   | "No Answer"
   | "Internal DNC"
+  | "NGTG"
   | "";
 
 export default function CloserProcessLeadPage() {
@@ -1562,6 +1564,23 @@ export default function CloserProcessLeadPage() {
                     color="rose"
                   />
 
+                  <OutcomeCard
+                    selected={
+                      outcome === "NGTG"
+                    }
+                    onClick={() =>
+                      setOutcome("NGTG")
+                    }
+                    icon={
+                      <Ban
+                        size={28}
+                      />
+                    }
+                    title="NGTG"
+                    description="Not good to go"
+                    color="slate"
+                  />
+
                 </div>
 
                 {/* CLIENT LEAD ID / CHANNEL NAME */}
@@ -1843,6 +1862,8 @@ export default function CloserProcessLeadPage() {
                         ? "bg-amber-500 hover:bg-amber-600"
                         : outcome === "Internal DNC"
                         ? "bg-rose-700 hover:bg-rose-800"
+                        : outcome === "NGTG"
+                        ? "bg-slate-600 hover:bg-slate-700"
                         : "bg-slate-400"
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
@@ -2218,7 +2239,8 @@ function OutcomeCard({
     | "teal"
     | "cyan"
     | "amber"
-    | "rose";
+    | "rose"
+    | "slate";
 }) {
   const styles = {
     green: {
@@ -2275,6 +2297,14 @@ function OutcomeCard({
       icon: "bg-rose-200 text-rose-800",
       title: "text-rose-800",
       ring: "ring-rose-300",
+    },
+
+    slate: {
+      border: "border-slate-300",
+      bg: "bg-slate-50",
+      icon: "bg-slate-200 text-slate-700",
+      title: "text-slate-700",
+      ring: "ring-slate-300",
     },
   };
 

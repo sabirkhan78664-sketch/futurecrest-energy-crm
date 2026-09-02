@@ -32,6 +32,7 @@ function statusBadgeClass(status: string | null) {
   if (normalized === "processing") return "bg-cyan-100 text-cyan-700";
   if (normalized === "no answer") return "bg-slate-100 text-slate-700";
   if (normalized === "internal dnc") return "bg-red-900 text-red-50";
+  if (normalized === "ngtg") return "bg-slate-300 text-slate-800";
   if (normalized === "lost" || normalized === "rejected") return "bg-red-100 text-red-700";
   if (normalized === "assigned") return "bg-purple-100 text-purple-700";
   return "bg-amber-100 text-amber-700";
