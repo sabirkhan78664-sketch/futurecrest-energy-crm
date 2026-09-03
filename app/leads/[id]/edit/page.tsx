@@ -15,11 +15,18 @@ export default async function EditLeadPage({ params }: Props) {
 
   if (!lead) notFound();
 
-  // Admin/Super Admin can process (disposition) this lead only when
-  // they're the one who currently owns it via Take Lead.
-  const canProcessLead =
-    ["Admin", "Super Admin"].includes(profile.role) &&
-    lead.assigned_closer === profile.id;
+  // Admin/Super Admin can view and process (disposition) any lead, not
+  // only one they currently own via Take Lead — the Closer ownership
+  // rule (Closer must own the lead to process it) is unaffected; this
+  // is Admin/Super Admin-only.
+  const canProcessLead = ["Admin", "Super Admin"].includes(
+    profile.role
+  );
+
+  // Separately tracked so the disposition section can show an accurate
+  // "taken by you" vs "you have Admin/Super Admin access" message —
+  // canProcessLead no longer implies ownership.
+  const isLeadOwner = lead.assigned_closer === profile.id;
 
   return (
     <MainLayout>
@@ -34,6 +41,7 @@ export default async function EditLeadPage({ params }: Props) {
           initialData={lead}
           isEdit
           canProcessLead={canProcessLead}
+          isLeadOwner={isLeadOwner}
           currentRole={profile.role}
         />
       </div>

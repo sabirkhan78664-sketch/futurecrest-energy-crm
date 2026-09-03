@@ -59,10 +59,14 @@ interface DispositionLead {
 interface LeadDispositionSectionProps {
   // The full lead record (same shape getLead()/LeadForm's initialData
   // already carries) — only the fields this section actually reads are
-  // typed here. The parent only renders this component once ownership
-  // (assigned_closer === current user) is already confirmed, so it
-  // isn't re-checked here.
+  // typed here. The parent renders this component for any Admin/Super
+  // Admin regardless of ownership; isLeadOwner below just picks the
+  // right banner text.
   lead: DispositionLead;
+  // True when the current user is this lead's assigned_closer. Admin/
+  // Super Admin can process a lead they don't own too — this only
+  // changes which explanatory message is shown, not what's allowed.
+  isLeadOwner?: boolean;
 }
 
 /* ============================================================
@@ -211,6 +215,7 @@ function OutcomeButton({
 
 export default function LeadDispositionSection({
   lead,
+  isLeadOwner = false,
 }: LeadDispositionSectionProps) {
   const router = useRouter();
 
@@ -378,7 +383,9 @@ export default function LeadDispositionSection({
 
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
           <CheckCircle size={16} />
-          Taken by you — you can process this lead.
+          {isLeadOwner
+            ? "Taken by you — you can process this lead."
+            : "You have Admin/Super Admin access to process this lead."}
         </div>
 
       </section>

@@ -21,13 +21,19 @@ interface LeadFormProps {
   hideAssignment?: boolean;
   agentName?: string;
   setAgentName?: (value: string) => void;
-  // Admin/Super Admin only: true when this lead's assigned_closer is the
-  // current user, i.e. they took it via Take Lead. Computed server-side
-  // by the edit page (which already has profile.id/profile.role) rather
-  // than derived from LeadForm's own client-side role fetch below, so the
-  // Lead Disposition section doesn't flash in/out while that fetch is
-  // still in flight.
+  // Admin/Super Admin only: true when Admin/Super Admin should see and
+  // be able to submit the Lead Disposition section for this lead —
+  // Admin/Super Admin can process any lead, not only one they currently
+  // own via Take Lead. Computed server-side by the edit page (which
+  // already has profile.role) rather than derived from LeadForm's own
+  // client-side role fetch below, so the section doesn't flash in/out
+  // while that fetch is still in flight.
   canProcessLead?: boolean;
+  // Whether the current user is this lead's assigned_closer — separate
+  // from canProcessLead, which no longer implies ownership. Used only
+  // to pick the right banner text ("taken by you" vs "Admin/Super Admin
+  // access") on the Lead Disposition section.
+  isLeadOwner?: boolean;
   // Optional server-known role, e.g. currentRole={profile.role} from the
   // edit page. Seeds the internal currentRole state below so
   // canReassign/isAdmin are correct from the very first paint instead of
@@ -49,6 +55,7 @@ export default function LeadForm({
   agentName,
   setAgentName,
   canProcessLead = false,
+  isLeadOwner = false,
   currentRole: currentRoleProp,
 }: LeadFormProps) {
   const router = useRouter();
@@ -2201,7 +2208,10 @@ setDncr={setDncrNumber}
         ====================================================== */}
 
         {isEdit && canProcessLead && (
-          <LeadDispositionSection lead={initialData} />
+          <LeadDispositionSection
+            lead={initialData}
+            isLeadOwner={isLeadOwner}
+          />
         )}
 
         {/* ======================================================

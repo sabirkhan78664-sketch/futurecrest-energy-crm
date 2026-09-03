@@ -49,9 +49,8 @@ function cleanString(value: unknown) {
 |--------------------------------------------------------------------------
 | GET
 |--------------------------------------------------------------------------
-| Load one lead assigned to (owned by) the logged-in Closer, Admin, or
-| Super Admin — ownership (assigned_closer === profile.id) is what's
-| checked below, not role alone.
+| Load one lead — a Closer must own it (assigned_closer === profile.id);
+| Admin/Super Admin can load any lead regardless of ownership.
 |--------------------------------------------------------------------------
 */
 
@@ -128,9 +127,18 @@ export async function GET(
     |--------------------------------------------------------------------------
     | SECURITY
     |--------------------------------------------------------------------------
+    | Admin/Super Admin can view/process any lead — ownership only
+    | matters for Closer.
     */
 
-    if (lead.assigned_closer !== profile.id) {
+    const isAdminRole = ["Admin", "Super Admin"].includes(
+      profile.role
+    );
+
+    if (
+      !isAdminRole &&
+      lead.assigned_closer !== profile.id
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -197,10 +205,10 @@ export async function GET(
 | Sold, Interested, Processing, No Answer, Follow-up, Lost, Internal DNC,
 | NGTG
 |
-| Whoever calls this must currently own the lead — assigned_closer must
-| equal their own profile id, checked below regardless of role. An
-| Admin/Super Admin does not get a role-based bypass: taking a lead via
-| Take Lead is what makes them the owner, same as a Closer.
+| A Closer must currently own the lead — assigned_closer must equal
+| their own profile id. Admin/Super Admin can process any lead
+| regardless of who currently owns it (they don't need to have taken it
+| via Take Lead first).
 |
 | General lead editing goes through /api/leads/[id]/edit instead.
 |--------------------------------------------------------------------------
@@ -285,9 +293,16 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     | SECURITY CHECK
     |--------------------------------------------------------------------------
+    | Admin/Super Admin can process any lead — ownership only matters
+    | for Closer.
     */
 
+    const isAdminRole = ["Admin", "Super Admin"].includes(
+      profile.role
+    );
+
     if (
+      !isAdminRole &&
       existingLead.assigned_closer !==
       profile.id
     ) {
@@ -401,13 +416,8 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     */
 
-    const canReopenClosedLead = [
-      "Admin",
-      "Super Admin",
-    ].includes(profile.role);
-
     if (
-      !canReopenClosedLead &&
+      !isAdminRole &&
       (existingLead.status === "Sold" ||
         existingLead.status === "Lost")
     ) {
@@ -590,17 +600,26 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     */
 
+    // Closer keeps the strict ownership match as a defense-in-depth
+    // guarantee at the query level too, on top of the check above.
+    // Admin/Super Admin can update any lead by id, regardless of who
+    // currently owns it.
+    let updateQuery = adminSupabase
+      .from("leads")
+      .update(updateData)
+      .eq("id", leadId);
+
+    if (!isAdminRole) {
+      updateQuery = updateQuery.eq(
+        "assigned_closer",
+        profile.id
+      );
+    }
+
     const {
       data: updatedLead,
       error: updateError,
-    } = await adminSupabase
-      .from("leads")
-      .update(updateData)
-      .eq("id", leadId)
-      .eq(
-        "assigned_closer",
-        profile.id
-      )
+    } = await updateQuery
       .select("*")
       .single();
 
