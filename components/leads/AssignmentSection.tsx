@@ -134,7 +134,7 @@ export default function AssignmentSection({
               <>
                 <option>New</option>
                 <option>Follow-up</option>
-                <option>Interested</option>
+                <option value="Interested">Not Interested</option>
                 <option>Processing</option>
                 <option>Sold</option>
                 <option>Lost</option>

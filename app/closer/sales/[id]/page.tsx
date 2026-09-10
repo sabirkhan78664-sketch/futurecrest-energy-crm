@@ -1466,7 +1466,7 @@ export default function CloserProcessLeadPage() {
                         size={28}
                       />
                     }
-                    title="Interested"
+                    title="Not Interested"
                     description="Customer is interested in the offer"
                     color="teal"
                   />

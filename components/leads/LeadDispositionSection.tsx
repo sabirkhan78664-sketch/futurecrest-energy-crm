@@ -453,7 +453,7 @@ export default function LeadDispositionSection({
                 selected={outcome === "Interested"}
                 onClick={() => setOutcome("Interested")}
                 icon={<ThumbsUp size={16} />}
-                label="Interested"
+                label="Not Interested"
                 color="teal"
               />
 

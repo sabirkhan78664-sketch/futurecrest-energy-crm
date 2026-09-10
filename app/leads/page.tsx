@@ -76,7 +76,7 @@ function buildPeriodHref(
   if (current.search) params.set("search", current.search);
   if (current.status) params.set("status", current.status);
   if (current.campaign) params.set("campaign", current.campaign);
-  if (tabKey !== "all") params.set("period", tabKey);
+  params.set("period", tabKey);
 
   const query = params.toString();
 
@@ -124,9 +124,9 @@ export default async function LeadsPage({
       : "";
 
   const periodFilter =
-    typeof params?.period === "string"
+    typeof params?.period === "string" && params.period.trim()
       ? params.period.trim().toLowerCase()
-      : "";
+      : "today";
 
   // Normalize global search
   searchQuery = searchQuery
@@ -467,8 +467,31 @@ export default async function LeadsPage({
     }
   );
 
+  // Metric cards below (Total Leads, Sales, Follow-ups, Rejected) must
+  // respect the active period tab, same bucketing rule the table filter
+  // above uses: Sold leads by closed_at, everything else by created_at.
+  // Today's Leads is intentionally excluded — it always means "today"
+  // regardless of which tab is active.
+  const periodFilteredLeads = periodStart
+    ? allPermittedLeads.filter((lead: {
+        status?: string | null;
+        closed_at?: string | null;
+        created_at?: string | null;
+      }) => {
+        const isSold =
+          String(lead.status || "").toLowerCase() === "sold";
+        const dateValue = isSold ? lead.closed_at : lead.created_at;
+
+        if (!dateValue) {
+          return false;
+        }
+
+        return new Date(dateValue) >= periodStart;
+      })
+    : allPermittedLeads;
+
   const totalLeads =
-    allPermittedLeads.length;
+    periodFilteredLeads.length;
 
   // Evaluated in the business's own timezone (Asia/Kolkata, same
   // convention as app/my-leads/page.tsx) — toISOString() is always UTC,
@@ -496,27 +519,32 @@ export default async function LeadsPage({
   // ============================================================
 
   const sales =
-    allPermittedLeads.filter(
+    periodFilteredLeads.filter(
       (lead: any) =>
         String(lead.status || "")
           .toLowerCase() === "sold"
     ).length;
 
   const followups =
-    allPermittedLeads.filter(
+    periodFilteredLeads.filter(
       (lead: any) =>
         String(lead.status || "")
           .toLowerCase() === "follow-up"
     ).length;
 
   const rejected =
-    allPermittedLeads.filter(
+    periodFilteredLeads.filter(
       (lead: any) =>
         String(lead.status || "")
           .toLowerCase() === "rejected" ||
         String(lead.status || "")
           .toLowerCase() === "lost"
     ).length;
+
+  const periodQualifier =
+    periodFilter !== "all" && PERIOD_LABELS[periodFilter]
+      ? ` (${PERIOD_LABELS[periodFilter]})`
+      : "";
 
   // ============================================================
   // 11. PAGE
@@ -594,10 +622,7 @@ export default async function LeadsPage({
             <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
 
               {PERIOD_TABS.map((tab) => {
-                const isActive =
-                  tab.key === "all"
-                    ? !periodFilter
-                    : periodFilter === tab.key;
+                const isActive = periodFilter === tab.key;
 
                 return (
                   <Link
@@ -637,11 +662,14 @@ export default async function LeadsPage({
         <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-6">
 
           <StatCard
-            title="Total Leads"
+            title={`Total Leads${periodQualifier}`}
             value={totalLeads}
             color="text-blue-600"
             icon={<FileText size={16} className="text-blue-500" />}
-            href="/leads"
+            href={buildPeriodHref(periodFilter, {
+              search: searchQuery,
+              campaign: campaignFilter,
+            })}
           />
 
           <StatCard
@@ -653,27 +681,39 @@ export default async function LeadsPage({
           />
 
           <StatCard
-            title="Sales"
+            title={`Sales${periodQualifier}`}
             value={sales}
             color="text-green-600"
             icon={<DollarSign size={16} className="text-green-500" />}
-            href="/leads?status=Sold"
+            href={buildPeriodHref(periodFilter, {
+              search: searchQuery,
+              status: "Sold",
+              campaign: campaignFilter,
+            })}
           />
 
           <StatCard
-            title="Follow-ups"
+            title={`Follow-ups${periodQualifier}`}
             value={followups}
             color="text-yellow-600"
             icon={<PhoneCall size={16} className="text-yellow-500" />}
-            href="/leads?status=Follow-up"
+            href={buildPeriodHref(periodFilter, {
+              search: searchQuery,
+              status: "Follow-up",
+              campaign: campaignFilter,
+            })}
           />
 
           <StatCard
-            title="Rejected"
+            title={`Rejected${periodQualifier}`}
             value={rejected}
             color="text-red-600"
             icon={<XCircle size={16} className="text-red-500" />}
-            href="/leads?status=Rejected"
+            href={buildPeriodHref(periodFilter, {
+              search: searchQuery,
+              status: "Rejected",
+              campaign: campaignFilter,
+            })}
           />
 
         </div>

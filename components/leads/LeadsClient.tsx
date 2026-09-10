@@ -29,6 +29,13 @@ interface Lead {
     username: string | null;
   } | null;
 
+  assignedAgent?: {
+    id: string;
+    employee_id: string | null;
+    full_name: string | null;
+    username: string | null;
+  } | null;
+
   created_at: string | null;
 }
 
@@ -46,13 +53,15 @@ export default function LeadsClient({
   const [fuel, setFuel] = useState("");
   const [agent, setAgent] = useState("");
   const [campaign, setCampaign] = useState("");
+  const [channelName, setChannelName] = useState("");
 
   const uniqueAgents = useMemo(() => {
     // The filter needs to match on assigned_agent (a profile UUID), but the
     // dropdown should show a human-readable name rather than the raw UUID —
-    // resolve it from the enriched `creator` profile on the lead that
-    // actually created it (created_by === assigned_agent for Agent-submitted
-    // leads). Falls back to the UUID only if no matching profile was found.
+    // resolve it from the enriched `assignedAgent` profile (looked up directly
+    // by assigned_agent, so it's correct even when an Admin reassigned the
+    // lead and created_by !== assigned_agent). Falls back to the `creator`
+    // match, then the raw UUID, only if that lookup came back empty.
     const nameById = new Map<string, string>();
 
     leads.forEach((lead) => {
@@ -61,7 +70,8 @@ export default function LeadsClient({
       }
 
       const profile =
-        lead.created_by === lead.assigned_agent ? lead.creator : null;
+        lead.assignedAgent ??
+        (lead.created_by === lead.assigned_agent ? lead.creator : null);
 
       const label =
         profile?.full_name ||
@@ -108,16 +118,19 @@ export default function LeadsClient({
       const matchesFuel = !fuel || lead.fuel_type === fuel;
       const matchesAgent = !agent || lead.assigned_agent === agent;
       const matchesCampaign = !campaign || lead.campaign === campaign;
+      const matchesChannel =
+        !channelName || lead.channel_name === channelName;
 
       return (
         matchesSearch &&
         matchesStatus &&
         matchesFuel &&
         matchesAgent &&
-        matchesCampaign
+        matchesCampaign &&
+        matchesChannel
       );
     });
-  }, [leads, search, status, fuel, agent, campaign]);
+  }, [leads, search, status, fuel, agent, campaign, channelName]);
 
   return (
     <>
@@ -134,6 +147,8 @@ export default function LeadsClient({
         setAgent={setAgent}
         campaign={campaign}
         setCampaign={setCampaign}
+        channelName={channelName}
+        setChannelName={setChannelName}
         uniqueAgents={uniqueAgents}
         uniqueCampaigns={uniqueCampaigns}
       />

@@ -19,6 +19,9 @@ interface Props {
   campaign: string;
   setCampaign: (value: string) => void;
 
+  channelName: string;
+  setChannelName: (value: string) => void;
+
   uniqueAgents: { id: string; label: string }[];
   uniqueCampaigns: string[];
 }
@@ -34,6 +37,8 @@ export default function LeadToolbar({
   setAgent,
   campaign,
   setCampaign,
+  channelName,
+  setChannelName,
   uniqueAgents,
   uniqueCampaigns,
 }: Props) {
@@ -43,6 +48,7 @@ export default function LeadToolbar({
     setFuel("");
     setAgent("");
     setCampaign("");
+    setChannelName("");
   }
 
   const exportParams = new URLSearchParams();
@@ -55,7 +61,7 @@ export default function LeadToolbar({
   return (
     <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
 
         <input
           className="rounded-xl border border-slate-300 p-3 md:col-span-2"
@@ -72,7 +78,7 @@ export default function LeadToolbar({
           <option value="">All Status</option>
           <option>New</option>
           <option>Follow-up</option>
-          <option>Interested</option>
+          <option value="Interested">Not Interested</option>
           <option>Processing</option>
           <option>Sold</option>
           <option>Lost</option>
@@ -119,6 +125,17 @@ export default function LeadToolbar({
               {item.label}
             </option>
           ))}
+        </select>
+
+        <select
+          className="rounded-xl border border-slate-300 p-3"
+          value={channelName}
+          onChange={(e) => setChannelName(e.target.value)}
+        >
+          <option value="">All Channels</option>
+          <option>Mango</option>
+          <option>Umbrella</option>
+          <option>Brother</option>
         </select>
 
       </div>

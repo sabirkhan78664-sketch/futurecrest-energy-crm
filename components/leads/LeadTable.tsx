@@ -103,7 +103,7 @@ function StatusBadge({
     case "Interested":
       return (
         <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
-          Interested
+          Not Interested
         </span>
       );
 
