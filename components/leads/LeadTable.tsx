@@ -564,12 +564,7 @@ export default function LeadTable({
                     <>
                       <td className="px-4 py-3 text-xs">
 
-                        {lead.creator ? (
-                          lead.creator.full_name ||
-                          lead.creator.employee_id ||
-                          lead.creator.username ||
-                          "Agent"
-                        ) : lead.agent ? (
+                        {lead.agent ? (
                           lead.agent.full_name
                         ) : lead.agent_name ? (
                           <>
@@ -579,6 +574,11 @@ export default function LeadTable({
                               (Partner)
                             </span>
                           </>
+                        ) : lead.creator ? (
+                          lead.creator.full_name ||
+                          lead.creator.employee_id ||
+                          lead.creator.username ||
+                          "Agent"
                         ) : (
                           <span className="text-gray-400">
                             Unknown

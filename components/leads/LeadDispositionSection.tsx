@@ -257,14 +257,16 @@ export default function LeadDispositionSection({
   const [success, setSuccess] = useState("");
 
   // Same priority as the Agent column elsewhere (e.g. LeadTable.tsx):
-  // creator (created_by) first, then the assigned_agent FK embed, then
-  // the plain-text agent_name Channel Partner submissions use instead
-  // of a profile-linked creator.
+  // the currently assigned_agent wins (so a reassignment shows up
+  // immediately), falling back to the plain-text agent_name a Channel
+  // Partner submission uses, and only falling back to the original
+  // creator (created_by, which never changes on reassignment) when
+  // there's no assigned-agent profile at all.
   const agent =
-    lead.creator ||
-    lead.agent ||
     lead.assignedAgent ||
-    (lead.agent_name ? { full_name: lead.agent_name } : null);
+    lead.agent ||
+    (lead.agent_name ? { full_name: lead.agent_name } : null) ||
+    lead.creator;
 
   const owner = lead.closer || null;
 
