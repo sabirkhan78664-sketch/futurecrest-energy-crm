@@ -761,8 +761,8 @@ export default function LeadForm({
         }
       }
 
-      if (!/^\d{10}$/.test(mobile.trim())) {
-        alert("Phone must be exactly 10 digits. Example: 0412525859");
+      if (!mobile.trim()) {
+        alert("Mobile Number is required.");
         return false;
       }
 
