@@ -29,25 +29,29 @@ export async function PATCH(
       return NextResponse.json({ success: false, message: "Invalid lead ID." }, { status: 400 });
     }
 
+    // Single fetch of the lead's current state, reused by the Closer
+    // ownership check below, the reassignment bookkeeping, and the
+    // closed_at transition check further down — previously each of
+    // those ran its own separate fetch, which is how the closed_at
+    // check drifted out of sync and re-stamped closed_at on every save
+    // instead of only on a genuine status change.
+    const { data: existingLead, error: fetchError } = await adminSupabase
+      .from("leads")
+      .select("assigned_closer, status")
+      .eq("id", leadId)
+      .maybeSingle();
+
+    if (fetchError || !existingLead) {
+      return NextResponse.json({ success: false, message: "Lead not found." }, { status: 404 });
+    }
+
     // A Closer may only edit a lead assigned to them — Admin/Super Admin
     // keep unrestricted access to every lead.
-    if (!isAdmin) {
-      const { data: existingLead, error: fetchError } = await adminSupabase
-        .from("leads")
-        .select("assigned_closer")
-        .eq("id", leadId)
-        .single();
-
-      if (fetchError || !existingLead) {
-        return NextResponse.json({ success: false, message: "Lead not found." }, { status: 404 });
-      }
-
-      if (existingLead.assigned_closer !== profile.id) {
-        return NextResponse.json(
-          { success: false, message: "This lead is not assigned to you." },
-          { status: 403 }
-        );
-      }
+    if (!isAdmin && existingLead.assigned_closer !== profile.id) {
+      return NextResponse.json(
+        { success: false, message: "This lead is not assigned to you." },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -78,18 +82,14 @@ export async function PATCH(
     // approval workflow already sets when it assigns a closer, otherwise
     // the lead ends up with a new assigned_closer next to a stale
     // assigned_at/assigned_by from whoever had it before.
-    if (isAdmin && "assigned_closer" in body) {
-      const { data: currentLead } = await adminSupabase
-        .from("leads")
-        .select("assigned_closer")
-        .eq("id", leadId)
-        .maybeSingle();
-
-      if (currentLead && currentLead.assigned_closer !== (body.assigned_closer || null)) {
-        body.assignment_status = body.assigned_closer ? "Assigned" : "Unassigned";
-        body.assigned_at = body.assigned_closer ? new Date().toISOString() : null;
-        body.assigned_by = body.assigned_closer ? profile.id : null;
-      }
+    if (
+      isAdmin &&
+      "assigned_closer" in body &&
+      existingLead.assigned_closer !== (body.assigned_closer || null)
+    ) {
+      body.assignment_status = body.assigned_closer ? "Assigned" : "Unassigned";
+      body.assigned_at = body.assigned_closer ? new Date().toISOString() : null;
+      body.assigned_by = body.assigned_closer ? profile.id : null;
     }
 
     // Postgres date/time columns reject an empty string ("" is not a
@@ -113,25 +113,21 @@ export async function PATCH(
     // created_at — mirrors the Closer's Process Lead save path
     // (app/api/closer/sales/[id]/route.ts) so a lead marked Sold/Lost
     // through this general edit form actually counts on the dashboard.
-    // Skipped if the caller already sent their own closed_at, so an
-    // explicit backdate/correction is respected. Also skipped when
-    // status isn't actually changing (e.g. an Admin only reassigning
-    // the agent on an already-Sold lead) — otherwise every unrelated
-    // save of an already-Sold lead re-stamps closed_at to "now" and
-    // the lead wrongly appears in "Sales Today".
-    if ("status" in body && !("closed_at" in body)) {
-      const { data: existingStatusRow } = await adminSupabase
-        .from("leads")
-        .select("status")
-        .eq("id", leadId)
-        .maybeSingle();
-
-      if (existingStatusRow && body.status !== existingStatusRow.status) {
-        if (body.status === "Sold" || body.status === "Lost") {
-          body.closed_at = new Date().toISOString();
-        } else if (body.status === "Follow-up") {
-          body.closed_at = null;
-        }
+    // Only fires on a genuine status transition (compared against the
+    // lead's existing status fetched above) — editing an unrelated
+    // field like the assigned agent on an already-Sold lead must never
+    // move its closed_at. Skipped entirely if the caller already sent
+    // their own closed_at, so an explicit backdate/correction is
+    // respected.
+    if (
+      "status" in body &&
+      body.status !== existingLead.status &&
+      !("closed_at" in body)
+    ) {
+      if (body.status === "Sold" || body.status === "Lost") {
+        body.closed_at = new Date().toISOString();
+      } else if (body.status === "Follow-up") {
+        body.closed_at = null;
       }
     }
 
