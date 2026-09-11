@@ -766,13 +766,13 @@ export default function LeadForm({
         return false;
       }
 
-      if (!/^[A-Za-z0-9]{10}$/.test(nmi.trim())) {
-        alert("NMI must be exactly 10 alphanumeric characters.");
+      if (!/^[A-Za-z0-9]{10,11}$/.test(nmi.trim())) {
+        alert("NMI must be 10 or 11 alphanumeric characters.");
         return false;
       }
 
-      if (mirn.trim() && !/^\d{10}$/.test(mirn.trim())) {
-        alert("MIRN must be exactly 10 digits when entered.");
+      if (mirn.trim() && !/^\d{10,11}$/.test(mirn.trim())) {
+        alert("MIRN must be 10 or 11 digits when entered.");
         return false;
       }
     }

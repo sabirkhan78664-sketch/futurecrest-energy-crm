@@ -41,10 +41,10 @@ export default function EnergySection({
           <input
             required
             inputMode="text"
-            maxLength={10}
+            maxLength={11}
             value={nmi}
             onChange={(e) => setNmi(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
-            placeholder="10-character NMI"
+            placeholder="10 or 11-character NMI"
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
         </div>
@@ -57,10 +57,10 @@ export default function EnergySection({
 
           <input
             inputMode="numeric"
-            maxLength={10}
+            maxLength={11}
             value={mirn}
             onChange={(e) => setMirn(e.target.value.replace(/\D/g, ""))}
-            placeholder="10-digit MIRN (optional)"
+            placeholder="10 or 11-digit MIRN (optional)"
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
         </div>
