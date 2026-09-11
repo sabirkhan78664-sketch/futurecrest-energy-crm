@@ -35,19 +35,37 @@ async function nextLeadIds(campaign: string, count: number) {
   );
 }
 
-function mapLead(row: any, generatedLeadId: string | null, userId: string) {
+function mapLead(
+  row: any,
+  generatedLeadId: string | null,
+  userId: string,
+  previous?: { status: string | null; closed_at: string | null }
+) {
   const status = clean(row.status) || "Sold";
   const isSold = status === "Sold";
 
   // Every dashboard metric buckets by closed_at, not status or
   // created_at — an imported Sold/Lost row with no closed_at would be
   // silently invisible on the dashboard forever. Respects an explicit
-  // closed_at column if the CSV provides one.
-  const closedAt =
-    clean(row.closed_at) ||
-    (status === "Sold" || status === "Lost"
-      ? new Date().toISOString()
-      : null);
+  // closed_at column if the CSV provides one. For an UPDATE to an
+  // existing lead_id (previous is set), only re-stamp closed_at when
+  // status is actually transitioning — otherwise re-importing an
+  // already-Sold row to fix an unrelated column would wrongly reset
+  // its sale date to today. New inserts (no previous row) keep the
+  // original stamp-on-Sold/Lost behavior.
+  const closedAt = clean(row.closed_at)
+    ? clean(row.closed_at)
+    : !previous
+      ? status === "Sold" || status === "Lost"
+        ? new Date().toISOString()
+        : null
+      : previous.status === status
+        ? previous.closed_at
+        : status === "Sold" || status === "Lost"
+          ? new Date().toISOString()
+          : status === "Follow-up"
+            ? null
+            : previous.closed_at;
 
   return {
     lead_id: clean(row.lead_id) || generatedLeadId,
@@ -134,8 +152,39 @@ export async function POST(req: NextRequest) {
     let updated = 0;
     const updateErrors: any[] = [];
 
+    // Batch-fetch each existing row's current status/closed_at up front
+    // (one query) so mapLead can tell a genuine status transition apart
+    // from a re-import of an unchanged status — see mapLead's closedAt
+    // comment above.
+    const existingByLeadId = new Map<
+      string,
+      { status: string | null; closed_at: string | null }
+    >();
+
+    if (withLeadId.length) {
+      const { data: existingRows } = await adminSupabase
+        .from("leads")
+        .select("lead_id, status, closed_at")
+        .in(
+          "lead_id",
+          withLeadId.map((row: any) => clean(row.lead_id))
+        );
+
+      for (const existingRow of existingRows || []) {
+        existingByLeadId.set(existingRow.lead_id, {
+          status: existingRow.status,
+          closed_at: existingRow.closed_at,
+        });
+      }
+    }
+
     for (const row of withLeadId) {
-      const payload = mapLead(row, clean(row.lead_id), user.id);
+      const payload = mapLead(
+        row,
+        clean(row.lead_id),
+        user.id,
+        existingByLeadId.get(clean(row.lead_id))
+      );
 
       const { error } = await adminSupabase
         .from("leads")

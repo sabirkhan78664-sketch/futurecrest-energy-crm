@@ -114,12 +114,24 @@ export async function PATCH(
     // (app/api/closer/sales/[id]/route.ts) so a lead marked Sold/Lost
     // through this general edit form actually counts on the dashboard.
     // Skipped if the caller already sent their own closed_at, so an
-    // explicit backdate/correction is respected.
+    // explicit backdate/correction is respected. Also skipped when
+    // status isn't actually changing (e.g. an Admin only reassigning
+    // the agent on an already-Sold lead) — otherwise every unrelated
+    // save of an already-Sold lead re-stamps closed_at to "now" and
+    // the lead wrongly appears in "Sales Today".
     if ("status" in body && !("closed_at" in body)) {
-      if (body.status === "Sold" || body.status === "Lost") {
-        body.closed_at = new Date().toISOString();
-      } else if (body.status === "Follow-up") {
-        body.closed_at = null;
+      const { data: existingStatusRow } = await adminSupabase
+        .from("leads")
+        .select("status")
+        .eq("id", leadId)
+        .maybeSingle();
+
+      if (existingStatusRow && body.status !== existingStatusRow.status) {
+        if (body.status === "Sold" || body.status === "Lost") {
+          body.closed_at = new Date().toISOString();
+        } else if (body.status === "Follow-up") {
+          body.closed_at = null;
+        }
       }
     }
 
