@@ -98,6 +98,7 @@ export default function CustomerSection({
             onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
             required
             inputMode="numeric"
+            maxLength={11}
             placeholder="e.g. 0412525859"
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
