@@ -74,8 +74,15 @@ function StatusBadge({
   switch (status) {
     case "New":
       return (
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
           New
+        </span>
+      );
+
+    case "Sold":
+      return (
+        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+          Sold
         </span>
       );
 
@@ -172,7 +179,7 @@ function StatusBadge({
 
     case "Lost":
       return (
-        <span className="rounded-full bg-gray-300 px-3 py-1 text-xs font-semibold text-gray-800">
+        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
           Lost
         </span>
       );
