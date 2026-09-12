@@ -181,14 +181,17 @@ export async function GET(req: NextRequest) {
       query = query.gte("created_at", periodStart);
     }
   } else {
-    const campaign = req.nextUrl.searchParams.get("campaign");
-    const status = req.nextUrl.searchParams.get("status");
+    // The Leads filters are multi-select, so the toolbar sends each
+    // selected value as a repeated query param (?status=Sold&status=Lost)
+    // instead of a single value.
+    const campaign = req.nextUrl.searchParams.getAll("campaign");
+    const status = req.nextUrl.searchParams.getAll("status");
     const from = req.nextUrl.searchParams.get("from");
     const to = req.nextUrl.searchParams.get("to");
     const channel = req.nextUrl.searchParams.get("channel");
 
-    if (campaign) query = query.eq("campaign", campaign);
-    if (status) query = query.eq("status", status);
+    if (campaign.length) query = query.in("campaign", campaign);
+    if (status.length) query = query.in("status", status);
     if (from) query = query.gte("created_at", from);
     if (to) query = query.lte("created_at", to);
     if (channel) query = query.eq("channel_name", channel);

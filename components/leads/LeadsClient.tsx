@@ -159,42 +159,56 @@ function globalSearch(leads: Lead[], query: string) {
 
 // The one common filtering pipeline used for both the table and the
 // metric cards — Sold leads bucket by closed_at (when the outcome was
-// actually recorded), everything else by created_at.
+// actually recorded), everything else by created_at. Multiple values
+// within one filter are OR'd together (e.g. Fuel: Single + Dual); the
+// six filters themselves AND together, same as before.
 function applyNormalFilters(
   leads: Lead[],
   filters: {
     period: string;
-    status: string;
-    fuel: string;
-    campaign: string;
-    agent: string;
-    channel: string;
+    status: string[];
+    fuel: string[];
+    campaign: string[];
+    agent: string[];
+    channel: string[];
   },
   todayStartIST: string
 ) {
   let result = leads;
 
-  if (filters.status) {
-    result = result.filter((lead) => lead.status === filters.status);
-  }
-
-  if (filters.fuel) {
-    result = result.filter((lead) => lead.fuel_type === filters.fuel);
-  }
-
-  if (filters.campaign) {
-    result = result.filter((lead) => lead.campaign === filters.campaign);
-  }
-
-  if (filters.agent) {
+  if (filters.status.length > 0) {
     result = result.filter(
-      (lead) => lead.assigned_agent === filters.agent
+      (lead) => lead.status !== null && filters.status.includes(lead.status)
     );
   }
 
-  if (filters.channel) {
+  if (filters.fuel.length > 0) {
     result = result.filter(
-      (lead) => lead.channel_name === filters.channel
+      (lead) =>
+        lead.fuel_type !== null && filters.fuel.includes(lead.fuel_type)
+    );
+  }
+
+  if (filters.campaign.length > 0) {
+    result = result.filter(
+      (lead) =>
+        lead.campaign !== null && filters.campaign.includes(lead.campaign)
+    );
+  }
+
+  if (filters.agent.length > 0) {
+    result = result.filter(
+      (lead) =>
+        lead.assigned_agent !== null &&
+        filters.agent.includes(lead.assigned_agent)
+    );
+  }
+
+  if (filters.channel.length > 0) {
+    result = result.filter(
+      (lead) =>
+        lead.channel_name != null &&
+        filters.channel.includes(lead.channel_name)
     );
   }
 
@@ -222,11 +236,15 @@ export default function LeadsClient({
   mode = "leads",
 }: Props) {
   const [search, setSearch] = useState(initialFilters.search);
-  const [status, setStatus] = useState(initialFilters.status);
-  const [fuel, setFuel] = useState("");
-  const [agent, setAgent] = useState("");
-  const [campaign, setCampaign] = useState(initialFilters.campaign);
-  const [channelName, setChannelName] = useState("");
+  const [status, setStatus] = useState<string[]>(
+    initialFilters.status ? [initialFilters.status] : []
+  );
+  const [fuel, setFuel] = useState<string[]>([]);
+  const [agent, setAgent] = useState<string[]>([]);
+  const [campaign, setCampaign] = useState<string[]>(
+    initialFilters.campaign ? [initialFilters.campaign] : []
+  );
+  const [channelName, setChannelName] = useState<string[]>([]);
   const [period, setPeriod] = useState(initialFilters.period);
 
   const uniqueAgents = useMemo(() => {
@@ -361,20 +379,20 @@ export default function LeadsClient({
             </div>
           )}
 
-          {!isSearchMode && status && (
+          {!isSearchMode && status.length > 0 && (
             <div className="mt-2 text-sm text-slate-500">
               Filter:
               <span className="ml-2 rounded-md bg-blue-50 px-2 py-1 font-semibold text-blue-700">
-                {status}
+                {status.join(", ")}
               </span>
             </div>
           )}
 
-          {!isSearchMode && campaign && (
+          {!isSearchMode && campaign.length > 0 && (
             <div className="mt-2 text-sm text-slate-500">
               Form:
               <span className="ml-2 rounded-md bg-purple-50 px-2 py-1 font-semibold text-purple-700">
-                {campaign}
+                {campaign.join(", ")}
               </span>
             </div>
           )}
@@ -437,7 +455,7 @@ export default function LeadsClient({
           icon={<FileText size={16} className="text-blue-500" />}
           onClick={() => {
             setSearch("");
-            setStatus("");
+            setStatus([]);
           }}
         />
 
@@ -459,7 +477,7 @@ export default function LeadsClient({
           icon={<DollarSign size={16} className="text-green-500" />}
           onClick={() => {
             setSearch("");
-            setStatus("Sold");
+            setStatus(["Sold"]);
           }}
         />
 
@@ -470,7 +488,7 @@ export default function LeadsClient({
           icon={<PhoneCall size={16} className="text-yellow-500" />}
           onClick={() => {
             setSearch("");
-            setStatus("Follow-up");
+            setStatus(["Follow-up"]);
           }}
         />
 
@@ -481,7 +499,7 @@ export default function LeadsClient({
           icon={<XCircle size={16} className="text-red-500" />}
           onClick={() => {
             setSearch("");
-            setStatus("Rejected");
+            setStatus(["Rejected"]);
           }}
         />
 

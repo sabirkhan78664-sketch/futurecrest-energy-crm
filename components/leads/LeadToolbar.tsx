@@ -2,25 +2,51 @@
 
 import Link from "next/link";
 import { RefreshCw, Plus, Download } from "lucide-react";
+import MultiSelectFilter from "./MultiSelectFilter";
+
+const STATUS_OPTIONS = [
+  { value: "New", label: "New" },
+  { value: "Follow-up", label: "Follow-up" },
+  { value: "Interested", label: "Not Interested" },
+  { value: "Processing", label: "Processing" },
+  { value: "Sold", label: "Sold" },
+  { value: "Lost", label: "Lost" },
+  { value: "No Answer", label: "No Answer" },
+  { value: "Internal DNC", label: "Internal DNC" },
+  { value: "NGTG", label: "NGTG" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+const FUEL_OPTIONS = [
+  { value: "Single", label: "Single" },
+  { value: "Gas", label: "Gas" },
+  { value: "Dual", label: "Dual" },
+];
+
+const FORM_OPTIONS = [
+  { value: "Energy", label: "Energy" },
+  { value: "PHI", label: "PHI" },
+  { value: "NBN", label: "NBN" },
+];
 
 interface Props {
   search: string;
   setSearch: (value: string) => void;
 
-  status: string;
-  setStatus: (value: string) => void;
+  status: string[];
+  setStatus: (value: string[]) => void;
 
-  fuel: string;
-  setFuel: (value: string) => void;
+  fuel: string[];
+  setFuel: (value: string[]) => void;
 
-  agent: string;
-  setAgent: (value: string) => void;
+  agent: string[];
+  setAgent: (value: string[]) => void;
 
-  campaign: string;
-  setCampaign: (value: string) => void;
+  campaign: string[];
+  setCampaign: (value: string[]) => void;
 
-  channelName: string;
-  setChannelName: (value: string) => void;
+  channelName: string[];
+  setChannelName: (value: string[]) => void;
 
   setPeriod: (value: string) => void;
 
@@ -47,20 +73,30 @@ export default function LeadToolbar({
 }: Props) {
   function resetFilters() {
     setSearch("");
-    setStatus("");
-    setFuel("");
-    setAgent("");
-    setCampaign("");
-    setChannelName("");
+    setStatus([]);
+    setFuel([]);
+    setAgent([]);
+    setCampaign([]);
+    setChannelName([]);
     setPeriod("today");
   }
 
   const exportParams = new URLSearchParams();
-  if (campaign) exportParams.set("campaign", campaign);
-  if (status) exportParams.set("status", status);
+  campaign.forEach((value) => exportParams.append("campaign", value));
+  status.forEach((value) => exportParams.append("status", value));
   const exportHref = `/api/leads/export${
     exportParams.toString() ? `?${exportParams.toString()}` : ""
   }`;
+
+  const agentOptions = uniqueAgents.map((item) => ({
+    value: item.id,
+    label: item.label,
+  }));
+
+  const channelOptions = uniqueChannels.map((item) => ({
+    value: item,
+    label: item,
+  }));
 
   return (
     <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -74,73 +110,40 @@ export default function LeadToolbar({
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        <select
-          className="rounded-xl border border-slate-300 p-3"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="">All Status</option>
-          <option>New</option>
-          <option>Follow-up</option>
-          <option value="Interested">Not Interested</option>
-          <option>Processing</option>
-          <option>Sold</option>
-          <option>Lost</option>
-          <option>No Answer</option>
-          <option>Internal DNC</option>
-          <option>NGTG</option>
-          <option>Rejected</option>
-        </select>
+        <MultiSelectFilter
+          label="All Status"
+          options={STATUS_OPTIONS}
+          selected={status}
+          onChange={setStatus}
+        />
 
-        <select
-          className="rounded-xl border border-slate-300 p-3"
-          value={fuel}
-          onChange={(e) => setFuel(e.target.value)}
-        >
-          <option value="">All Fuel</option>
-          <option value="Single">Single</option>
-          <option value="Gas">Gas</option>
-          <option value="Dual">Dual</option>
-        </select>
+        <MultiSelectFilter
+          label="All Fuel"
+          options={FUEL_OPTIONS}
+          selected={fuel}
+          onChange={setFuel}
+        />
 
-        <select
-          className="rounded-xl border border-slate-300 p-3"
-          value={campaign}
-          onChange={(e) => setCampaign(e.target.value)}
-        >
-          <option value="">All Forms</option>
-          <option value="Energy">Energy</option>
-          <option value="PHI">PHI</option>
-          <option value="NBN">NBN</option>
-        </select>
+        <MultiSelectFilter
+          label="All Forms"
+          options={FORM_OPTIONS}
+          selected={campaign}
+          onChange={setCampaign}
+        />
 
-        <select
-          className="rounded-xl border border-slate-300 p-3"
-          value={agent}
-          onChange={(e) => setAgent(e.target.value)}
-        >
-          <option value="">All Agents</option>
+        <MultiSelectFilter
+          label="All Agents"
+          options={agentOptions}
+          selected={agent}
+          onChange={setAgent}
+        />
 
-          {uniqueAgents.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="rounded-xl border border-slate-300 p-3"
-          value={channelName}
-          onChange={(e) => setChannelName(e.target.value)}
-        >
-          <option value="">All Channels</option>
-
-          {uniqueChannels.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFilter
+          label="All Channels"
+          options={channelOptions}
+          selected={channelName}
+          onChange={setChannelName}
+        />
 
       </div>
 
