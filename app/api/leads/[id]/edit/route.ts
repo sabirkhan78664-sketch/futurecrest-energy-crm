@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
+import { addTimeline } from "@/lib/timeline";
 
 export async function PATCH(
   request: NextRequest,
@@ -119,11 +120,10 @@ export async function PATCH(
     // move its closed_at. Skipped entirely if the caller already sent
     // their own closed_at, so an explicit backdate/correction is
     // respected.
-    if (
-      "status" in body &&
-      body.status !== existingLead.status &&
-      !("closed_at" in body)
-    ) {
+    const statusChanged =
+      "status" in body && body.status !== existingLead.status;
+
+    if (statusChanged && !("closed_at" in body)) {
       if (body.status === "Sold" || body.status === "Lost") {
         body.closed_at = new Date().toISOString();
       } else if (body.status === "Follow-up") {
@@ -140,6 +140,24 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+
+    // Records this save as lead history — a plain "Lead Updated" entry
+    // for saves that don't touch status (e.g. reassigning the agent),
+    // or a "Status Changed" entry with the transition when they do.
+    // This is what lets the Lead Dates section show a genuine "Last
+    // Updated" time, and lets the last Sold date survive a reopen.
+    try {
+      await addTimeline({
+        lead_id: leadId,
+        action: statusChanged ? "Status Changed" : "Lead Updated",
+        description: statusChanged
+          ? `${existingLead.status || "New"} → ${body.status}`
+          : "Lead details updated",
+        performed_by: profile.id,
+      });
+    } catch (timelineError) {
+      console.error("Timeline log error:", timelineError);
     }
 
     return NextResponse.json({ success: true, lead: data });

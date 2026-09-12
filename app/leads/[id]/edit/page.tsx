@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { getLead } from "@/lib/leads";
+import { getTimeline } from "@/lib/timeline";
 import MainLayout from "@/components/layout/MainLayout";
 import LeadForm from "@/components/leads/LeadForm";
 import { notFound } from "next/navigation";
@@ -14,6 +15,8 @@ export default async function EditLeadPage({ params }: Props) {
   const lead = await getLead(Number(id));
 
   if (!lead) notFound();
+
+  const timeline = await getTimeline(Number(id));
 
   // Admin/Super Admin can view and process (disposition) any lead, not
   // only one they currently own via Take Lead — the Closer ownership
@@ -43,6 +46,7 @@ export default async function EditLeadPage({ params }: Props) {
           canProcessLead={canProcessLead}
           isLeadOwner={isLeadOwner}
           currentRole={profile.role}
+          timeline={timeline}
         />
       </div>
     </MainLayout>

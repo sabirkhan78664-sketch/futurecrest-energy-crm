@@ -22,6 +22,8 @@ interface Props {
   channelName: string;
   setChannelName: (value: string) => void;
 
+  setPeriod: (value: string) => void;
+
   uniqueAgents: { id: string; label: string }[];
   uniqueCampaigns: string[];
 }
@@ -39,6 +41,7 @@ export default function LeadToolbar({
   setCampaign,
   channelName,
   setChannelName,
+  setPeriod,
   uniqueAgents,
   uniqueCampaigns,
 }: Props) {
@@ -49,6 +52,7 @@ export default function LeadToolbar({
     setAgent("");
     setCampaign("");
     setChannelName("");
+    setPeriod("today");
   }
 
   const exportParams = new URLSearchParams();

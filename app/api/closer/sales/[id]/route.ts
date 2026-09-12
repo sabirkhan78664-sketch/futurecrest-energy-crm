@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { sendPushToUser } from "@/lib/push";
+import { addTimeline } from "@/lib/timeline";
 
 /*
 |--------------------------------------------------------------------------
@@ -512,13 +513,16 @@ export async function PATCH(
       channel_name:
         body?.channel_name || null,
 
-      // Defaults to null; the Sold/Lost blocks below override this with
-      // a fresh timestamp. Needed so that when Admin/Super Admin reopens
-      // a closed lead and picks a non-terminal outcome (Interested,
-      // Processing, No Answer, Internal DNC, NGTG), the stale closed_at
-      // from the previous Sold/Lost doesn't linger on the record.
-      closed_at:
-        null,
+      // closed_at is intentionally NOT defaulted here. It's only ever
+      // (re)stamped below, on a genuine transition INTO Sold/Lost —
+      // never cleared. Reopening a closed lead to any other outcome
+      // (Interested, Processing, No Answer, Follow-up, Internal DNC,
+      // NGTG) now preserves the last Sold/Lost date instead of wiping
+      // it, so the historical Sold date survives a reopen. Safe: every
+      // consumer of closed_at (dashboard metrics, leads-page stats,
+      // reports) also gates on the lead's CURRENT status, so a stale
+      // closed_at on a lead no longer Sold/Lost can't make it wrongly
+      // count as a current sale/loss anywhere.
     };
 
     /*
@@ -569,8 +573,10 @@ export async function PATCH(
           );
       }
 
-      updateData.closed_at =
-        new Date().toISOString();
+      if (existingLead.status !== "Sold") {
+        updateData.closed_at =
+          new Date().toISOString();
+      }
     }
 
     /*
@@ -579,19 +585,9 @@ export async function PATCH(
     |--------------------------------------------------------------------------
     */
 
-    if (outcome === "Lost") {
+    if (outcome === "Lost" && existingLead.status !== "Lost") {
       updateData.closed_at =
         new Date().toISOString();
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | FOLLOW-UP
-    |--------------------------------------------------------------------------
-    */
-
-    if (outcome === "Follow-up") {
-      updateData.closed_at = null;
     }
 
     /*
@@ -637,6 +633,26 @@ export async function PATCH(
         },
         { status: 500 }
       );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TIMELINE
+    |--------------------------------------------------------------------------
+    | Records the disposition as lead history — this is what lets the
+    | Lead Dates section show the last Sold date even after the lead is
+    | later reopened to a different outcome.
+    */
+
+    try {
+      await addTimeline({
+        lead_id: leadId,
+        action: "Status Changed",
+        description: `${existingLead.status || "New"} → ${outcome}`,
+        performed_by: profile.id,
+      });
+    } catch (timelineError) {
+      console.error("Timeline log error:", timelineError);
     }
 
     /*

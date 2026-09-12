@@ -55,6 +55,7 @@ interface Lead {
   } | null;
 
   created_at: string | null;
+  closed_at?: string | null;
 }
 
 interface Props {
@@ -461,6 +462,10 @@ export default function LeadTable({
               </th>
 
               <th className="px-4 py-3 text-center">
+                Sold
+              </th>
+
+              <th className="px-4 py-3 text-center">
                 Actions
               </th>
 
@@ -477,7 +482,7 @@ export default function LeadTable({
             {leads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   className="py-12 text-center text-slate-500"
                 >
                   No leads found.
@@ -668,6 +673,37 @@ export default function LeadTable({
                           )
                         )
                       : "-"}
+
+                  </td>
+
+                  {/* ==========================================
+                      SOLD DATE
+
+                      Only shown while the lead is CURRENTLY Sold —
+                      never a misleading date for a lead that was
+                      reopened to another status or never Sold at
+                      all. The full historical Sold date (even after
+                      a reopen) is on the Lead Details/Edit page's
+                      Lead Dates section, sourced from lead_timeline.
+                  ========================================== */}
+
+                  <td className="px-4 py-3 text-center text-xs text-slate-400">
+
+                    {lead.status === "Sold" && lead.closed_at
+                      ? new Intl.DateTimeFormat(
+                          "en-AU",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            timeZone: "UTC",
+                          }
+                        ).format(
+                          new Date(
+                            lead.closed_at
+                          )
+                        )
+                      : "—"}
 
                   </td>
 

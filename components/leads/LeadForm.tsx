@@ -43,6 +43,14 @@ interface LeadFormProps {
   // source of truth everywhere else in this file — this only affects the
   // initial value.
   currentRole?: string;
+  // This lead's history from lead_timeline (app/leads/[id]/edit/page.tsx
+  // → getTimeline()), newest first. Only meaningful when isEdit — powers
+  // the Lead Dates section's Sold/Last Updated values.
+  timeline?: Array<{
+    action: string;
+    description: string | null;
+    created_at: string;
+  }>;
 }
 
 type Campaign = "Energy" | "PHI" | "NBN";
@@ -57,6 +65,7 @@ export default function LeadForm({
   canProcessLead = false,
   isLeadOwner = false,
   currentRole: currentRoleProp,
+  timeline = [],
 }: LeadFormProps) {
   const router = useRouter();
 
@@ -1510,6 +1519,42 @@ export default function LeadForm({
   }
 
   /* ============================================================
+     LEAD DATES (Created / Sold / Last Updated / Current Status)
+
+     Sold is read from lead_timeline history rather than the raw
+     closed_at column — that field is shared by Sold and Lost and can
+     be missing on very old rows, but the timeline entry survives a
+     later reopen, so this stays accurate even after the lead has
+     since moved to a different status. Falls back to closed_at only
+     for a currently-Sold lead with no timeline entry (i.e. sold
+     before this history was wired up).
+  ============================================================ */
+
+  function formatDateTime(value?: string | null) {
+    if (!value) return "—";
+
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Kolkata",
+    }).format(new Date(value));
+  }
+
+  const lastSoldTimelineEntry = timeline.find((entry) =>
+    entry.description?.endsWith("→ Sold")
+  );
+
+  const soldAt =
+    lastSoldTimelineEntry?.created_at ||
+    (initialData?.status === "Sold" ? initialData?.closed_at : null);
+
+  const lastUpdatedAt =
+    timeline[0]?.created_at || initialData?.created_at;
+
+  /* ============================================================
      RENDER
   ============================================================ */
 
@@ -2212,6 +2257,81 @@ setDncr={setDncrNumber}
             lead={initialData}
             isLeadOwner={isLeadOwner}
           />
+        )}
+
+        {/* ======================================================
+            LEAD DATES
+        ====================================================== */}
+
+        {isEdit && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-slate-800">
+              Lead Dates
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Created
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {formatDateTime(initialData?.created_at)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Sold
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {formatDateTime(soldAt)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Last Updated
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {formatDateTime(lastUpdatedAt)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Current Status
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-800">
+                  {initialData?.status || "New"}
+                </p>
+              </div>
+            </div>
+
+            {timeline.length > 0 && (
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                  Recent Activity
+                </p>
+
+                <ul className="space-y-1.5 text-sm text-slate-600">
+                  {timeline.slice(0, 5).map((entry, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span>
+                        {entry.action}
+                        {entry.description ? `: ${entry.description}` : ""}
+                      </span>
+                      <span className="shrink-0 text-xs text-slate-400">
+                        {formatDateTime(entry.created_at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
         )}
 
         {/* ======================================================
