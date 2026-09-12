@@ -1,9 +1,7 @@
-import { createSupabaseServerClient } from "./supabase-server";
+import { adminSupabase } from "./admin";
 
 export async function getSettings() {
-  const supabase = await createSupabaseServerClient();
-
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("crm_settings")
     .select("*")
     .limit(1)

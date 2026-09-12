@@ -1,6 +1,6 @@
 import MainLayout from "@/components/layout/MainLayout";
 import { requireRole } from "@/lib/auth";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { adminSupabase } from "@/lib/admin";
 import Link from "next/link";
 import { AlertCircle, CalendarClock, Phone, ArrowRight } from "lucide-react";
 
@@ -8,11 +8,11 @@ export default async function FollowupsPage() {
   // Follow-ups is in the nav for Agent, Admin, and Super Admin only.
   const { profile } = await requireRole(["Agent", "Admin", "Super Admin"]);
 
-  const supabase = await createSupabaseServerClient();
-
-  // Fetch leads with a "Follow-up" status. Agents may only see their own
-  // follow-up leads — everyone else with access to this page sees all of them.
-  let query = supabase
+  // Admin/Super Admin must see every follow-up lead, not just their own —
+  // the RLS-bound session client can silently zero this out for those
+  // roles, same class of bug already fixed in getPendingApprovals(),
+  // getDashboardMetrics(), and the sidebar badge counts.
+  let query = adminSupabase
     .from("leads")
     .select("*")
     .eq("status", "Follow-up");
@@ -26,6 +26,22 @@ export default async function FollowupsPage() {
     .order("callback_time", { ascending: true });
 
   const allLeads = leads || [];
+
+  // assigned_agent is stored as the Agent's profile id (a uuid) — resolve
+  // it to a display name the same way every other lead list in this app
+  // does, instead of printing the raw id.
+  const { data: agentProfiles } = await adminSupabase
+    .from("profiles")
+    .select("id, full_name");
+
+  const agentNameById = new Map<string, string>(
+    (agentProfiles || []).map((p) => [p.id, p.full_name])
+  );
+
+  function agentName(id: string | null) {
+    if (!id) return "Unassigned";
+    return agentNameById.get(id) || "Unknown";
+  }
 
   // Get today's date in YYYY-MM-DD format to compare against database dates
   const today = new Date().toISOString().split("T")[0];
@@ -83,7 +99,7 @@ export default async function FollowupsPage() {
                             <Phone size={14} /> {lead.mobile}
                           </a>
                         </td>
-                        <td className="p-4">{lead.assigned_agent || "Unassigned"}</td>
+                        <td className="p-4">{agentName(lead.assigned_agent)}</td>
                         <td className="p-4 text-red-600 font-medium">
                           {lead.callback_date} at {lead.callback_time?.substring(0, 5)}
                         </td>
@@ -141,7 +157,7 @@ export default async function FollowupsPage() {
                             <Phone size={14} /> {lead.mobile}
                           </a>
                         </td>
-                        <td className="p-4">{lead.assigned_agent || "Unassigned"}</td>
+                        <td className="p-4">{agentName(lead.assigned_agent)}</td>
                         <td className="p-4">{lead.campaign || "-"}</td>
                         <td className="p-4 text-right">
                           <Link

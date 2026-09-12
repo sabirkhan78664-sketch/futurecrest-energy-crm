@@ -63,7 +63,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const query = adminSupabase
     .from("leads")
     .select(
-      "id, lead_id, customer_name, mobile, email, status, fuel_type, created_at, approval_status, qa_status, assigned_agent, assigned_closer, channel_name, offered_retailer, campaign"
+      "id, lead_id, customer_name, mobile, email, status, fuel_type, created_at, closed_at, approval_status, qa_status, assigned_agent, assigned_closer, channel_name, offered_retailer, campaign"
     )
     .order("created_at", { ascending: false });
 
@@ -179,14 +179,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }, {});
 
   // Group leads by channel_name. Leads with null/empty channel_name
-  // go into an "Direct / Unknown" bucket. Scoped to the selected period
-  // (by created_at) so the Today/Week/Month tabs actually filter it.
+  // go into an "Direct / Unknown" bucket.
   const periodStart = getPeriodStart(period);
-  const channelSourceLeads = periodStart
-    ? allLeads.filter(
-        (lead: any) => lead.created_at && new Date(lead.created_at) >= periodStart
-      )
-    : allLeads;
 
   const channelMap: Record<string, {
     name: string;
@@ -197,22 +191,52 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     campaigns: Record<string, number>;
   }> = {};
 
-  channelSourceLeads.forEach((lead: any) => {
+  function getOrCreateChannel(lead: { channel_name?: string | null }) {
     const ch = lead.channel_name?.trim() || "Direct / Unknown";
     if (!channelMap[ch]) {
       channelMap[ch] = { name: ch, total: 0, sold: 0, pending: 0,
                           rejected: 0, campaigns: {} };
     }
-    channelMap[ch].total++;
-    if (lead.status === "Sold" && lead.qa_status !== "Rejected")
-      channelMap[ch].sold++;
-    if (lead.approval_status === "Pending")
-      channelMap[ch].pending++;
-    if (lead.qa_status === "Rejected")
-      channelMap[ch].rejected++;
+    return channelMap[ch];
+  }
+
+  // "Leads that came in this period" — a legitimate created_at scope,
+  // drives total/pending/rejected/campaigns.
+  const channelSourceLeads = periodStart
+    ? allLeads.filter(
+        (lead) => lead.created_at && new Date(lead.created_at) >= periodStart
+      )
+    : allLeads;
+
+  channelSourceLeads.forEach((lead) => {
+    const row = getOrCreateChannel(lead);
+    row.total++;
+    if (lead.approval_status === "Pending") row.pending++;
+    if (lead.qa_status === "Rejected") row.rejected++;
     const camp = lead.campaign || "Unknown";
-    channelMap[ch].campaigns[camp] =
-      (channelMap[ch].campaigns[camp] || 0) + 1;
+    row.campaigns[camp] = (row.campaigns[camp] || 0) + 1;
+  });
+
+  // "Sold in this period" — scoped independently by closed_at (when the
+  // Closer actually recorded the sale), not created_at, so a lead created
+  // weeks ago but sold today still counts as today's sale. Same fix
+  // already applied to the Sales Trend chart in lib/dashboardMetrics.ts.
+  // Computed over ALL leads, not just channelSourceLeads, so a lead can
+  // contribute to total, sold, both, or neither independently.
+  const soldInPeriod = periodStart
+    ? allLeads.filter(
+        (lead) =>
+          lead.status === "Sold" &&
+          lead.qa_status !== "Rejected" &&
+          lead.closed_at &&
+          new Date(lead.closed_at) >= periodStart
+      )
+    : allLeads.filter(
+        (lead) => lead.status === "Sold" && lead.qa_status !== "Rejected"
+      );
+
+  soldInPeriod.forEach((lead) => {
+    getOrCreateChannel(lead).sold++;
   });
 
   const channelRows = Object.values(channelMap)
@@ -240,6 +264,33 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     return "text-red-600";
   }
 
+  const canExport = ["Admin", "Super Admin"].includes(profile.role);
+
+  // ExportButton's CSV includes Assigned Agent/Closer, both stored as
+  // profile ids on the lead — resolve them to names before export
+  // instead of dumping raw uuids into the report. Every other stat on
+  // this page keeps using allLeads unchanged.
+  let exportLeads: typeof allLeads = [];
+
+  if (canExport) {
+    const { data: peopleProfiles } = await adminSupabase
+      .from("profiles")
+      .select("id, full_name");
+
+    const nameById = new Map<string, string>(
+      (peopleProfiles || []).map((p) => [p.id, p.full_name])
+    );
+
+    const resolveName = (id: string | null) =>
+      id ? nameById.get(id) || "Unknown" : "";
+
+    exportLeads = allLeads.map((lead) => ({
+      ...lead,
+      assigned_agent: resolveName(lead.assigned_agent),
+      assigned_closer: resolveName(lead.assigned_closer),
+    }));
+  }
+
   return (
     <MainLayout>
       <LeadsRealtimeRefresher />
@@ -251,8 +302,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               Sales, lead status and Post-Sale QA performance
             </p>
           </div>
-          {["Admin", "Super Admin"].includes(profile.role) && (
-            <ExportButton leads={allLeads} />
+          {canExport && (
+            <ExportButton leads={exportLeads} />
           )}
         </div>
 
