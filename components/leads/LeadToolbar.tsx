@@ -25,7 +25,7 @@ interface Props {
   setPeriod: (value: string) => void;
 
   uniqueAgents: { id: string; label: string }[];
-  uniqueCampaigns: string[];
+  uniqueChannels: string[];
 }
 
 export default function LeadToolbar({
@@ -43,7 +43,7 @@ export default function LeadToolbar({
   setChannelName,
   setPeriod,
   uniqueAgents,
-  uniqueCampaigns,
+  uniqueChannels,
 }: Props) {
   function resetFilters() {
     setSearch("");
@@ -98,9 +98,9 @@ export default function LeadToolbar({
           onChange={(e) => setFuel(e.target.value)}
         >
           <option value="">All Fuel</option>
-          <option>Electricity</option>
-          <option>Gas</option>
-          <option>Dual Fuel</option>
+          <option value="Single">Single</option>
+          <option value="Gas">Gas</option>
+          <option value="Dual">Dual</option>
         </select>
 
         <select
@@ -108,13 +108,10 @@ export default function LeadToolbar({
           value={campaign}
           onChange={(e) => setCampaign(e.target.value)}
         >
-          <option value="">All Campaigns</option>
-
-          {uniqueCampaigns.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
+          <option value="">All Forms</option>
+          <option value="Energy">Energy</option>
+          <option value="PHI">PHI</option>
+          <option value="NBN">NBN</option>
         </select>
 
         <select
@@ -137,9 +134,12 @@ export default function LeadToolbar({
           onChange={(e) => setChannelName(e.target.value)}
         >
           <option value="">All Channels</option>
-          <option>Mango</option>
-          <option>Umbrella</option>
-          <option>Brother</option>
+
+          {uniqueChannels.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
         </select>
 
       </div>

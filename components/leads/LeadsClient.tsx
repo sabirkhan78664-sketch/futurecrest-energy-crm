@@ -262,11 +262,11 @@ export default function LeadsClient({
     }));
   }, [leads]);
 
-  const uniqueCampaigns = useMemo(() => {
+  const uniqueChannels = useMemo(() => {
     return Array.from(
       new Set(
         leads
-          .map((lead) => lead.campaign)
+          .map((lead) => lead.channel_name)
           .filter(Boolean)
       )
     ) as string[];
@@ -372,7 +372,7 @@ export default function LeadsClient({
 
           {!isSearchMode && campaign && (
             <div className="mt-2 text-sm text-slate-500">
-              Campaign:
+              Form:
               <span className="ml-2 rounded-md bg-purple-50 px-2 py-1 font-semibold text-purple-700">
                 {campaign}
               </span>
@@ -504,7 +504,7 @@ export default function LeadsClient({
         setChannelName={setChannelName}
         setPeriod={setPeriod}
         uniqueAgents={uniqueAgents}
-        uniqueCampaigns={uniqueCampaigns}
+        uniqueChannels={uniqueChannels}
       />
 
       {/* =====================================================

@@ -422,7 +422,7 @@ export default function LeadTable({
               </th>
 
               <th className="px-4 py-3 text-left">
-                Campaign
+                Form
               </th>
 
               {!isAgent && (
