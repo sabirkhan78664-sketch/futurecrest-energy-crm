@@ -13,6 +13,7 @@ import {
 import LeadToolbar from "./LeadToolbar";
 import LeadTable from "./LeadTable";
 import LeadsRealtimeRefresher from "./LeadsRealtimeRefresher";
+import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
 
 interface Lead {
   id: number;
@@ -281,12 +282,16 @@ export default function LeadsClient({
   }, [leads]);
 
   const uniqueChannels = useMemo(() => {
+    // Union the standard channel list with whatever real values are
+    // actually present (e.g. Channel Partner codes like FCS-CHP-037)
+    // — this guarantees every standard channel (including a brand new
+    // one like Banana) is always selectable, even before any lead has
+    // used it yet, while still surfacing every other real value.
     return Array.from(
-      new Set(
-        leads
-          .map((lead) => lead.channel_name)
-          .filter(Boolean)
-      )
+      new Set([
+        ...CHANNEL_OPTIONS,
+        ...leads.map((lead) => lead.channel_name).filter(Boolean),
+      ])
     ) as string[];
   }, [leads]);
 

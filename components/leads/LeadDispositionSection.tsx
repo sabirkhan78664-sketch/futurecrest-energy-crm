@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
 
 import {
   CheckCircle,
@@ -536,9 +537,11 @@ export default function LeadDispositionSection({
                   className="h-11 w-full rounded-xl border border-slate-300 px-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="">Select channel</option>
-                  <option value="Mango">Mango</option>
-                  <option value="Umbrella">Umbrella</option>
-                  <option value="Brother">Brother</option>
+                  {CHANNEL_OPTIONS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

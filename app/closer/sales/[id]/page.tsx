@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
+import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
 
 import {
   ArrowLeft,
@@ -1627,9 +1628,11 @@ export default function CloserProcessLeadPage() {
                       className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     >
                       <option value="">Select channel</option>
-                      <option value="Mango">Mango</option>
-                      <option value="Umbrella">Umbrella</option>
-                      <option value="Brother">Brother</option>
+                      {CHANNEL_OPTIONS.map((channel) => (
+                        <option key={channel} value={channel}>
+                          {channel}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
