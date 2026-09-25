@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
 import {
   Bell,
   ChevronDown,
@@ -29,55 +30,56 @@ export default function HeaderNav({
   const router = useRouter();
   const pathname = usePathname();
 
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const notificationRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef =
+    useRef<HTMLDivElement>(null);
 
-  const [searchText, setSearchText] = useState("");
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef =
+    useRef<HTMLDivElement>(null);
 
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
-  const [latestUnreadSenderId, setLatestUnreadSenderId] = useState<
-    string | null
-  >(null);
+  const [searchText, setSearchText] =
+    useState("");
 
-  const [qaNotificationCount, setQaNotificationCount] = useState(0);
-  const [qaNotifications, setQaNotifications] = useState<
-    Array<{
-      id: number;
-      title: string;
-      message: string;
-      type?: string;
-      reference_id?: number | null;
-      created_at?: string;
-    }>
-  >([]);
+  const [showProfileMenu, setShowProfileMenu] =
+    useState(false);
 
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [showNotifications, setShowNotifications] =
+    useState(false);
 
-  /* ============================================================
-     LOAD UNREAD MESSAGES
-  ============================================================ */
+  const [unreadMsgCount, setUnreadMsgCount] =
+    useState(0);
+
+  const [loggingOut, setLoggingOut] =
+    useState(false);
+
+  const [duplicateResults, setDuplicateResults] =
+    useState<any[]>([]);
+
+  const [showDuplicateResults, setShowDuplicateResults] =
+    useState(false);
+
+  const [duplicateSearching, setDuplicateSearching] =
+    useState(false);
+
+  /*
+   * ============================================================
+   * UNREAD MESSAGE COUNT
+   * ============================================================
+   */
 
   async function loadUnreadCount() {
     if (!profile?.id) {
       setUnreadMsgCount(0);
-      setLatestUnreadSenderId(null);
       return;
     }
 
-    // Fetching sender_id (not just a head-count) so a notification click
-    // can open the actual conversation — most recent unread first, since
-    // count:"exact" still reports the true total regardless of limit.
-    const { data, count, error } = await supabase
+    const { count, error } = await supabase
       .from("crm_messages")
-      .select("sender_id", {
+      .select("id", {
         count: "exact",
+        head: true,
       })
       .eq("receiver_id", profile.id)
-      .eq("is_read", false)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .eq("is_read", false);
 
     if (error) {
       console.error(
@@ -88,8 +90,13 @@ export default function HeaderNav({
     }
 
     setUnreadMsgCount(count ?? 0);
-    setLatestUnreadSenderId(data?.[0]?.sender_id ?? null);
   }
+
+  /*
+   * ============================================================
+   * LOAD COUNT
+   * ============================================================
+   */
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -97,34 +104,11 @@ export default function HeaderNav({
     loadUnreadCount();
   }, [profile?.id, pathname]);
 
-  /* ============================================================
-     UNREAD MESSAGE POLLING FALLBACK
-
-     The realtime subscription below silently does nothing if the
-     crm_messages table isn't added to Supabase's realtime
-     publication (a project-level config step, not something this
-     app controls) — the channel still reports "SUBSCRIBED" but no
-     postgres_changes events ever arrive. Without this, a recipient
-     who doesn't navigate to a new page never sees their unread
-     badge update. Poll as a guaranteed fallback regardless of
-     whether realtime is actually wired up.
-  ============================================================ */
-
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    const timer = window.setInterval(() => {
-      loadUnreadCount();
-    }, 5000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [profile?.id]);
-
-  /* ============================================================
-     MESSAGE REALTIME
-  ============================================================ */
+  /*
+   * ============================================================
+   * REALTIME MESSAGE COUNT
+   * ============================================================
+   */
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -175,143 +159,18 @@ export default function HeaderNav({
           }
         }
       )
-      .subscribe((status) => {
-        console.log(
-          "Header message realtime:",
-          status
-        );
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [profile?.id]);
 
-  /* ============================================================
-     POST-SALE QA NOTIFICATIONS
-  ============================================================ */
-
-  async function loadQaNotifications() {
-    if (!profile?.id || profile.role !== "QA") {
-      setQaNotificationCount(0);
-      setQaNotifications([]);
-      return;
-    }
-
-    const { data: storedNotifications, error } = await supabase
-      .from("notifications")
-      .select("id, title, message, type, reference_id, created_at")
-      .eq("user_id", profile.id)
-      .eq("is_read", false)
-      .eq("type", "post_sale_qa")
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.warn("QA notification load warning:", error.message);
-    }
-
-    const stored = (storedNotifications || []) as any[];
-    const knownLeadIds = new Set(
-      stored.map((item) => String(item.reference_id || ""))
-    );
-
-    const { data: soldLeads } = await supabase
-      .from("leads")
-      .select("id, lead_id, customer_name, created_at")
-      .eq("status", "Sold")
-      .not("qa_status", "in", "(Approved,Rejected)")
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    const fallback = (soldLeads || [])
-      .filter((lead: any) => !knownLeadIds.has(String(lead.id)))
-      .map((lead: any) => ({
-        id: -Number(lead.id),
-        title: "Sold Lead — QA Available",
-        message: `${lead.lead_id || `Lead #${lead.id}`} is ready for optional Post-Sale QA audit.`,
-        type: "post_sale_qa",
-        reference_id: lead.id,
-        created_at: lead.created_at,
-      }));
-
-    const combined = [...stored, ...fallback].slice(0, 10);
-    setQaNotifications(combined);
-    setQaNotificationCount(combined.length);
-  }
-
-  useEffect(() => {
-    if (!profile?.id || profile.role !== "QA") return;
-
-    void loadQaNotifications();
-
-    const channel = supabase
-      .channel(`qa-notifications-${profile.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${profile.id}`,
-        },
-        async (payload) => {
-          const notification = payload.new as any;
-
-          if (notification.type !== "post_sale_qa") return;
-
-          setQaNotifications((previous) => [
-            notification,
-            ...previous.filter((item) => item.id !== notification.id),
-          ].slice(0, 10));
-
-          setQaNotificationCount((previous) => previous + 1);
-
-          try {
-            const audio = new Audio(
-              "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
-            );
-            audio.volume = 1;
-            await audio.play();
-          } catch {}
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.id, profile?.role]);
-
-  async function openQaNotification(notification: {
-    id: number;
-    reference_id?: number | null;
-  }) {
-    setShowNotifications(false);
-
-    try {
-      await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("id", notification.id)
-        .eq("user_id", profile.id);
-    } catch {}
-
-    setQaNotifications((previous) =>
-      previous.filter((item) => item.id !== notification.id)
-    );
-    setQaNotificationCount((previous) => Math.max(0, previous - 1));
-
-    if (notification.reference_id) {
-      router.push(`/leads/${notification.reference_id}`);
-    } else {
-      router.push("/qa?filter=sold");
-    }
-  }
-
-  /* ============================================================
-     CLOSE DROPDOWNS
-  ============================================================ */
+  /*
+   * ============================================================
+   * CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
+   * ============================================================
+   */
 
   useEffect(() => {
     function handleOutsideClick(
@@ -352,61 +211,99 @@ export default function HeaderNav({
     };
   }, []);
 
-  /* ============================================================
-     SEARCH
-  ============================================================ */
-
-  function handleSearchSubmit(
-  event: React.FormEvent<HTMLFormElement>
-) {
-  event.preventDefault();
-
-  let query = searchText.trim();
-
-  if (!query) return;
-
   /*
-   * Remove common search labels.
-   *
-   * Example:
-   * "Lead ID: fcslid00003"
-   * becomes:
-   * "fcslid00003"
+   * ============================================================
+   * SEARCH
+   * ============================================================
    */
 
-  query = query
-    .replace(/^lead\s*id\s*:\s*/i, "")
-    .replace(/^lead\s*:\s*/i, "")
-    .trim();
+  async function handleSearchSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
 
-  if (!query) return;
+    const query = searchText.trim();
 
-  router.push(
-    `/leads?search=${encodeURIComponent(query)}`
-  );
-}
+    if (!query) {
+      return;
+    }
 
-  /* ============================================================
-     OPEN MESSAGES
-  ============================================================ */
+    // Mobile/NMI searches use the GLOBAL ENERGY DUPLICATE CHECK.
+    // This checks all Energy leads, not only the user's permitted leads.
+    const compact = query.replace(/[^A-Za-z0-9+]/g, "");
+    const digits = query.replace(/\D/g, "");
+    const looksLikeMobile =
+      digits.length >= 9 && digits.length <= 13;
+    const looksLikeNmi =
+      /^[A-Za-z0-9]{8,14}$/.test(compact) &&
+      (/[A-Za-z]/.test(compact) || digits.length >= 10);
+
+    if (looksLikeMobile || looksLikeNmi) {
+      setDuplicateSearching(true);
+      setShowDuplicateResults(false);
+
+      try {
+        const response = await fetch(
+          `/api/leads/duplicate-check?q=${encodeURIComponent(query)}`
+        );
+
+        const json = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+          setDuplicateResults(json.leads || []);
+          setShowDuplicateResults(true);
+          return;
+        }
+
+        console.error(
+          "Global duplicate check failed:",
+          json.message
+        );
+      } catch (error) {
+        console.error(
+          "Global duplicate check error:",
+          error
+        );
+      } finally {
+        setDuplicateSearching(false);
+      }
+
+      return;
+    }
+
+    router.push(
+      `/leads?search=${encodeURIComponent(query)}`
+    );
+  }
+
+  /*
+   * ============================================================
+   * OPEN MESSAGES
+   * ============================================================
+   */
 
   function openMessages() {
     setShowNotifications(false);
     setShowProfileMenu(false);
 
-    router.push(
-      latestUnreadSenderId
-        ? `/messages?user=${latestUnreadSenderId}`
-        : "/messages"
-    );
+    router.push("/messages");
   }
 
-  /* ============================================================
-     LOGOUT
-  ============================================================ */
+  /*
+   * ============================================================
+   * LOGOUT
+   *
+   * IMPORTANT:
+   * We always redirect in finally.
+   * This prevents the UI from remaining on
+   * "Logging out..." if Supabase takes too long.
+   * ============================================================
+   */
 
   async function handleLogout() {
-    if (loggingOut) return;
+    if (loggingOut) {
+      return;
+    }
 
     setLoggingOut(true);
 
@@ -423,34 +320,42 @@ export default function HeaderNav({
         error
       );
     } finally {
-      window.location.replace(
-        "/login"
-      );
+      /*
+       * Force navigation to login.
+       *
+       * This ensures the user can immediately
+       * log in with another CRM account.
+       */
+
+      window.location.replace("/login");
     }
   }
 
-  /* ============================================================
-     PROFILE INITIAL
-  ============================================================ */
+  /*
+   * ============================================================
+   * PROFILE INITIAL
+   * ============================================================
+   */
 
-  const initial = profile?.full_name
-    ? profile.full_name
-        .charAt(0)
-        .toUpperCase()
-    : "U";
+  const initial =
+    profile?.full_name
+      ? profile.full_name
+          .charAt(0)
+          .toUpperCase()
+      : "U";
 
-  const totalNotifications =
-    unreadMsgCount +
-    qaNotificationCount;
-
-  /* ============================================================
-     UI
-  ============================================================ */
+  /*
+   * ============================================================
+   * RENDER
+   * ============================================================
+   */
 
   return (
     <header className="sticky top-0 z-50 flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5 shadow-sm">
 
-      {/* SEARCH */}
+      {/* ======================================================
+          SEARCH BAR
+      ====================================================== */}
 
       <form
         onSubmit={handleSearchSubmit}
@@ -471,7 +376,7 @@ export default function HeaderNav({
                 event.target.value
               )
             }
-            placeholder="Search leads, agents..."
+            placeholder="Search leads, agents, mobile or NMI..."
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
           />
 
@@ -482,7 +387,7 @@ export default function HeaderNav({
                 setSearchText("")
               }
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
             >
               <X size={15} />
             </button>
@@ -491,11 +396,115 @@ export default function HeaderNav({
         </div>
       </form>
 
-      {/* RIGHT SIDE */}
+      {duplicateSearching && (
+        <div className="fixed left-1/2 top-20 z-[100] -translate-x-1/2 rounded-xl border border-blue-100 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-xl">
+          Checking all Energy leads for duplicate...
+        </div>
+      )}
+
+      {showDuplicateResults && (
+        <div className="fixed inset-0 z-[90] flex items-start justify-center bg-slate-900/40 px-4 pt-28">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Energy Duplicate Check
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Mobile / NMI: {searchText.trim()}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDuplicateResults(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-6">
+              {duplicateResults.length === 0 ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                  <div className="text-base font-bold text-emerald-700">
+                    No duplicate found
+                  </div>
+                  <div className="mt-1 text-sm text-emerald-600">
+                    This mobile/NMI does not exist in the Energy campaign.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                    <div className="font-bold text-red-700">
+                      {duplicateResults.length} duplicate lead{duplicateResults.length === 1 ? "" : "s"} found
+                    </div>
+                    <div className="mt-1 text-xs text-red-600">
+                      Check the existing lead before creating a new Energy lead.
+                    </div>
+                  </div>
+
+                  {duplicateResults.map((lead) => (
+                    <div
+                      key={lead.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-bold text-slate-900">
+                            {lead.lead_id || "-"}
+                          </div>
+                          <div className="mt-1 text-sm text-slate-700">
+                            {lead.customer_name || "-"}
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">
+                          Energy
+                        </span>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+                        <div>
+                          <span className="text-slate-400">Mobile</span>
+                          <div className="font-semibold text-slate-700">{lead.mobile || "-"}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">NMI</span>
+                          <div className="font-semibold text-slate-700">{lead.nmi || "-"}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Status</span>
+                          <div className="font-semibold text-slate-700">{lead.status || "-"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowDuplicateResults(false)}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================
+          RIGHT SIDE
+      ====================================================== */}
 
       <div className="flex items-center gap-3">
 
-        {/* NOTIFICATIONS */}
+        {/* ====================================================
+            NOTIFICATIONS
+        ==================================================== */}
 
         <div
           ref={notificationRef}
@@ -507,33 +516,28 @@ export default function HeaderNav({
             aria-label="Notifications"
             onClick={() => {
               setShowNotifications(
-                (previous) =>
-                  !previous
+                (previous) => !previous
               );
 
-              setShowProfileMenu(
-                false
-              );
+              setShowProfileMenu(false);
             }}
             className="relative rounded-xl p-2.5 text-slate-600 transition hover:bg-slate-100"
           >
 
             <Bell size={21} />
 
-            {totalNotifications >
-              0 && (
+            {unreadMsgCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow">
-                {totalNotifications >
-                99
+                {unreadMsgCount > 99
                   ? "99+"
-                  : totalNotifications}
+                  : unreadMsgCount}
               </span>
             )}
 
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-12 z-[100] w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute right-0 top-12 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
 
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
 
@@ -541,30 +545,25 @@ export default function HeaderNav({
                   Notifications
                 </p>
 
-                {totalNotifications >
-                  0 && (
+                {unreadMsgCount > 0 && (
                   <span className="rounded-full bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600">
-                    {totalNotifications}{" "}
-                    new
+                    {unreadMsgCount} unread
                   </span>
                 )}
 
               </div>
 
-              {/* MESSAGES */}
-
-              {unreadMsgCount >
-                0 && (
+              {unreadMsgCount > 0 ? (
                 <button
                   type="button"
-                  onClick={
-                    openMessages
-                  }
-                  className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-4 text-left hover:bg-slate-50"
+                  onClick={openMessages}
+                  className="flex w-full items-start gap-3 px-4 py-4 text-left transition hover:bg-slate-50"
                 >
 
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                    <MessageSquare size={18} />
+                    <MessageSquare
+                      size={18}
+                    />
                   </div>
 
                   <div>
@@ -575,86 +574,44 @@ export default function HeaderNav({
 
                     <p className="mt-1 text-xs text-slate-500">
                       You have{" "}
-                      {
-                        unreadMsgCount
-                      }{" "}
+                      {unreadMsgCount}{" "}
                       unread message
-                      {unreadMsgCount !==
-                      1
+                      {unreadMsgCount !== 1
                         ? "s"
-                        : ""}.
-                    </p>
-
-                    <p className="mt-2 text-xs font-semibold text-blue-600">
-                      Open messages →
+                        : ""}
+                      .
                     </p>
 
                   </div>
 
                 </button>
+              ) : (
+                <div className="px-4 py-8 text-center">
+
+                  <Bell
+                    size={28}
+                    className="mx-auto mb-2 text-slate-300"
+                  />
+
+                  <p className="text-sm font-medium text-slate-600">
+                    No new notifications
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    You're all caught up.
+                  </p>
+
+                </div>
               )}
-
-              {/* POST-SALE QA */}
-
-              {profile.role === "QA" &&
-                qaNotifications.length > 0 &&
-                qaNotifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    type="button"
-                    onClick={() =>
-                      openQaNotification(notification)
-                    }
-                    className="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-4 text-left hover:bg-orange-50"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-                      <Bell size={18} />
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {notification.title}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {notification.message}
-                      </p>
-                      <p className="mt-2 text-xs font-semibold text-blue-600">
-                        Open Sold Lead →
-                      </p>
-                    </div>
-                  </button>
-                ))}
-
-              {/* EMPTY */}
-
-              {unreadMsgCount ===
-                0 &&
-                qaNotificationCount ===
-                  0 && (
-                  <div className="px-4 py-8 text-center">
-
-                    <Bell
-                      size={28}
-                      className="mx-auto mb-2 text-slate-300"
-                    />
-
-                    <p className="text-sm font-medium text-slate-600">
-                      No new notifications
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                      You're all caught up.
-                    </p>
-
-                  </div>
-                )}
 
             </div>
           )}
 
         </div>
 
-        {/* MESSAGES */}
+        {/* ====================================================
+            MESSAGES
+        ==================================================== */}
 
         <button
           type="button"
@@ -668,11 +625,9 @@ export default function HeaderNav({
             className="text-blue-600"
           />
 
-          {unreadMsgCount >
-            0 && (
+          {unreadMsgCount > 0 && (
             <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow">
-              {unreadMsgCount >
-              99
+              {unreadMsgCount > 99
                 ? "99+"
                 : unreadMsgCount}
             </span>
@@ -680,7 +635,9 @@ export default function HeaderNav({
 
         </button>
 
-        {/* PROFILE */}
+        {/* ====================================================
+            PROFILE MENU
+        ==================================================== */}
 
         <div
           ref={profileMenuRef}
@@ -691,13 +648,10 @@ export default function HeaderNav({
             type="button"
             onClick={() => {
               setShowProfileMenu(
-                (previous) =>
-                  !previous
+                (previous) => !previous
               );
 
-              setShowNotifications(
-                false
-              );
+              setShowNotifications(false);
             }}
             className="flex items-center gap-3 rounded-xl px-2 py-1.5 transition hover:bg-slate-50"
           >
@@ -729,12 +683,12 @@ export default function HeaderNav({
 
           </button>
 
-          {/* PROFILE DROPDOWN */}
-
           {showProfileMenu && (
-            <div className="absolute right-0 top-14 z-[100] w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="absolute right-0 top-14 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
 
-              {/* USER */}
+              {/* ==============================================
+                  PROFILE INFORMATION
+              ============================================== */}
 
               <div className="border-b border-slate-100 bg-slate-50 px-4 py-4">
 
@@ -764,19 +718,20 @@ export default function HeaderNav({
 
               </div>
 
-              {/* MY PROFILE */}
+              {/* ==============================================
+                  MY PROFILE
+              ============================================== */}
 
               <button
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
 
-                  // IMPORTANT:
-                  // Every logged-in user uses
-                  // the same /profile page.
-                  router.push(
-                    "/profile"
-                  );
+                  if (profile?.id) {
+                    router.push(
+                      `/users/${profile.id}`
+                    );
+                  }
                 }}
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-50"
               >
@@ -789,7 +744,9 @@ export default function HeaderNav({
 
               </button>
 
-              {/* SETTINGS */}
+              {/* ==============================================
+                  SETTINGS
+              ============================================== */}
 
               <button
                 type="button"
@@ -811,24 +768,20 @@ export default function HeaderNav({
 
               </button>
 
-              {/* LOGOUT */}
+              {/* ==============================================
+                  LOGOUT
+              ============================================== */}
 
               <div className="border-t border-slate-100 p-2">
 
                 <button
                   type="button"
-                  disabled={
-                    loggingOut
-                  }
-                  onClick={
-                    handleLogout
-                  }
+                  disabled={loggingOut}
+                  onClick={handleLogout}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
 
-                  <LogOut
-                    size={17}
-                  />
+                  <LogOut size={17} />
 
                   <span>
                     {loggingOut
@@ -846,7 +799,6 @@ export default function HeaderNav({
         </div>
 
       </div>
-
     </header>
   );
-}   
+}
