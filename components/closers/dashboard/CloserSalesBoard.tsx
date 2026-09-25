@@ -58,17 +58,10 @@ export default function CloserSalesBoard() {
   }
 
   useEffect(() => {
-    loadCounts();
+  loadCounts();
+}, []);
 
-    const interval = setInterval(
-      loadCounts,
-      30000
-    );
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useLeadsRealtime(loadCounts);
+useLeadsRealtime(loadCounts);
 
   const displayNumber = (value: number) =>
     loading ? "—" : value;
