@@ -29,6 +29,8 @@ interface Lead {
   campaign: string | null;
   assigned_agent: string | null;
   assigned_closer: string | null;
+  // Set on Channel Partner submissions (which have no assigned_agent).
+  partner_code?: string | null;
   fuel_type: string | null;
   current_retailer: string;
   offered_retailer: string | null;
@@ -67,13 +69,26 @@ interface InitialFilters {
   period: string;
 }
 
+interface ChannelPartner {
+  id: string;
+  full_name: string | null;
+  employee_id: string | null;
+  partner_code: string | null;
+}
+
 interface Props {
   leads: Lead[];
   role: string;
   initialFilters: InitialFilters;
   todayStartIST: string;
   mode?: "leads" | "pending";
+  // Channel Partner users whose partner_code appears on these leads —
+  // lets the Agent filter list them as people (never as channels).
+  channelPartners?: ChannelPartner[];
 }
+
+// Stable default so the memos below don't recompute every render.
+const NO_PARTNERS: ChannelPartner[] = [];
 
 const PERIOD_LABELS: Record<string, string> = {
   today: "Today",
@@ -173,7 +188,8 @@ function applyNormalFilters(
     agent: string[];
     channel: string[];
   },
-  todayStartIST: string
+  todayStartIST: string,
+  partnerIdByCode: Map<string, string>
 ) {
   let result = leads;
 
@@ -197,12 +213,20 @@ function applyNormalFilters(
     );
   }
 
+  // A lead belongs to a selected person when they are its Assigned
+  // Agent, or the Channel Partner whose partner_code it carries.
   if (filters.agent.length > 0) {
-    result = result.filter(
-      (lead) =>
-        lead.assigned_agent !== null &&
-        filters.agent.includes(lead.assigned_agent)
-    );
+    result = result.filter((lead) => {
+      const partnerId = lead.partner_code
+        ? partnerIdByCode.get(lead.partner_code)
+        : undefined;
+
+      return (
+        (lead.assigned_agent !== null &&
+          filters.agent.includes(lead.assigned_agent)) ||
+        (partnerId !== undefined && filters.agent.includes(partnerId))
+      );
+    });
   }
 
   if (filters.channel.length > 0) {
@@ -235,6 +259,7 @@ export default function LeadsClient({
   initialFilters,
   todayStartIST,
   mode = "leads",
+  channelPartners = NO_PARTNERS,
 }: Props) {
   const [search, setSearch] = useState(initialFilters.search);
   const [status, setStatus] = useState<string[]>(
@@ -248,52 +273,74 @@ export default function LeadsClient({
   const [channelName, setChannelName] = useState<string[]>([]);
   const [period, setPeriod] = useState(initialFilters.period);
 
+  const partnerIdByCode = useMemo(
+    () =>
+      new Map(
+        channelPartners
+          .filter((partner) => partner.partner_code)
+          .map((partner) => [String(partner.partner_code), partner.id])
+      ),
+    [channelPartners]
+  );
+
   const uniqueAgents = useMemo(() => {
-    // The filter needs to match on assigned_agent (a profile UUID), but the
-    // dropdown should show a human-readable name rather than the raw UUID —
-    // resolve it from the enriched `assignedAgent` profile (looked up directly
-    // by assigned_agent, so it's correct even when an Admin reassigned the
-    // lead and created_by !== assigned_agent). Falls back to the `creator`
-    // match, then the raw UUID, only if that lookup came back empty.
-    const nameById = new Map<string, string>();
+    // PEOPLE associated with these leads: each Assigned Agent (Agent or
+    // Channel Partner profile, keyed by assigned_agent) plus each Channel
+    // Partner whose partner_code a lead carries. Labelled by name with
+    // the employee ID beneath — never the raw UUID.
+    const people = new Map<
+      string,
+      { id: string; label: string; description: string | null }
+    >();
 
-    leads.forEach((lead) => {
-      if (!lead.assigned_agent || nameById.has(lead.assigned_agent)) {
-        return;
-      }
-
-      const profile =
-        lead.assignedAgent ??
-        (lead.created_by === lead.assigned_agent ? lead.creator : null);
+    function addPerson(id: string, profile: any) {
+      if (people.has(id)) return;
 
       const label =
         profile?.full_name ||
         profile?.username ||
         profile?.employee_id ||
-        lead.assigned_agent;
+        "Unknown user";
 
-      nameById.set(lead.assigned_agent, label);
+      people.set(id, {
+        id,
+        label,
+        description:
+          profile?.employee_id && profile.employee_id !== label
+            ? profile.employee_id
+            : null,
+      });
+    }
+
+    leads.forEach((lead) => {
+      if (!lead.assigned_agent) return;
+
+      addPerson(
+        lead.assigned_agent,
+        lead.assignedAgent ??
+          (lead.created_by === lead.assigned_agent ? lead.creator : null)
+      );
     });
 
-    return Array.from(nameById.entries()).map(([id, label]) => ({
-      id,
-      label,
-    }));
-  }, [leads]);
+    const leadPartnerCodes = new Set(
+      leads.map((lead) => lead.partner_code).filter(Boolean)
+    );
 
-  const uniqueChannels = useMemo(() => {
-    // Union the standard channel list with whatever real values are
-    // actually present (e.g. Channel Partner codes like FCS-CHP-037)
-    // — this guarantees every standard channel (including a brand new
-    // one like Banana) is always selectable, even before any lead has
-    // used it yet, while still surfacing every other real value.
-    return Array.from(
-      new Set([
-        ...CHANNEL_OPTIONS,
-        ...leads.map((lead) => lead.channel_name).filter(Boolean),
-      ])
-    ) as string[];
-  }, [leads]);
+    channelPartners.forEach((partner) => {
+      if (partner.partner_code && leadPartnerCodes.has(partner.partner_code)) {
+        addPerson(partner.id, partner);
+      }
+    });
+
+    return Array.from(people.values()).sort((a, b) =>
+      a.label.localeCompare(b.label)
+    );
+  }, [leads, channelPartners]);
+
+  // Channels are the fixed standard list only. Channel Partner codes
+  // (e.g. FCS-CHP-037) stored in channel_name are people, and belong
+  // in the Agent filter above.
+  const uniqueChannels = CHANNEL_OPTIONS;
 
   const isSearchMode = search.trim().length > 0;
 
@@ -305,7 +352,8 @@ export default function LeadsClient({
     return applyNormalFilters(
       leads,
       { period, status, fuel, campaign, agent, channel: channelName },
-      todayStartIST
+      todayStartIST,
+      partnerIdByCode
     );
   }, [
     leads,
@@ -318,6 +366,7 @@ export default function LeadsClient({
     agent,
     channelName,
     todayStartIST,
+    partnerIdByCode,
   ]);
 
   // ============================================================

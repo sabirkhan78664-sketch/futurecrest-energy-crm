@@ -13,6 +13,8 @@ import {
 export interface MultiSelectOption {
   value: string;
   label: string;
+  // Optional secondary line, e.g. a person's employee ID.
+  description?: string | null;
 }
 
 interface Props {
@@ -122,7 +124,16 @@ export default function MultiSelectFilter({
               toggleOption(option.value, checked)
             }
           >
-            {option.label}
+            {option.description ? (
+              <span className="flex flex-col leading-tight">
+                <span>{option.label}</span>
+                <span className="text-xs text-slate-500">
+                  {option.description}
+                </span>
+              </span>
+            ) : (
+              option.label
+            )}
           </DropdownMenuCheckboxItem>
         ))}
 

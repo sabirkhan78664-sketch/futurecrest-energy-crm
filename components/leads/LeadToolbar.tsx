@@ -50,7 +50,7 @@ interface Props {
 
   setPeriod: (value: string) => void;
 
-  uniqueAgents: { id: string; label: string }[];
+  uniqueAgents: { id: string; label: string; description?: string | null }[];
   uniqueChannels: string[];
 }
 
@@ -91,6 +91,7 @@ export default function LeadToolbar({
   const agentOptions = uniqueAgents.map((item) => ({
     value: item.id,
     label: item.label,
+    description: item.description,
   }));
 
   const channelOptions = uniqueChannels.map((item) => ({

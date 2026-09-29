@@ -3,6 +3,7 @@ import LeadsClient from "@/components/leads/LeadsClient";
 import { getLeads } from "@/lib/leads";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { adminSupabase } from "@/lib/admin";
 import { redirect } from "next/navigation";
 import { getZonedTodayStart } from "@/lib/timezone";
 
@@ -194,6 +195,25 @@ export default async function LeadsPage({
     return false;
   });
 
+  // Channel Partner submissions carry the partner's partner_code (not an
+  // assigned_agent) — resolve those codes to the partner's profile so the
+  // Agent filter can list them by name + employee ID.
+  const partnerCodes = Array.from(
+    new Set(
+      permittedLeads
+        .map((lead: any) => lead.partner_code)
+        .filter(Boolean)
+    )
+  );
+
+  const { data: channelPartners } = partnerCodes.length
+    ? await adminSupabase
+        .from("profiles")
+        .select("id, full_name, employee_id, partner_code")
+        .eq("role", "Channel Partner")
+        .in("partner_code", partnerCodes)
+    : { data: [] };
+
   // "Today" must be evaluated in the business's own timezone, not the
   // browser's — computed once here (server-side) and handed to the
   // client so LeadsClient never needs its own timezone-aware logic.
@@ -213,6 +233,7 @@ export default async function LeadsPage({
         initialFilters={initialFilters}
         todayStartIST={todayStartIST}
         mode="leads"
+        channelPartners={channelPartners ?? []}
       />
     </MainLayout>
   );
