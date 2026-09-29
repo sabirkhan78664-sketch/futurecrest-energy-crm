@@ -53,6 +53,44 @@ function parseCSV(text: string) {
   });
 }
 
+// Row-level import report — row number is the spreadsheet row (header = 1).
+function IssueList({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items?: Array<{
+    row: number;
+    lead_id: string | null;
+    customer_name: string | null;
+    reason: string;
+  }>;
+  tone: string;
+}) {
+  if (!items?.length) return null;
+
+  return (
+    <div className={`mt-4 rounded-lg border p-4 ${tone}`}>
+      <p className="font-bold">
+        {title} — {items.length}
+      </p>
+
+      <div className="mt-2 max-h-80 space-y-1 overflow-y-auto text-sm">
+        {items.map((item, index) => (
+          <div key={`${item.row}-${index}`}>
+            <span className="font-semibold">Row {item.row}</span>
+            {item.lead_id ? ` · ${item.lead_id}` : ""}
+            {item.customer_name ? ` · ${item.customer_name}` : ""}
+            {" — "}
+            {item.reason}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ImportLeadsClient() {
   const router = useRouter();
   const [rows, setRows] = useState<any[]>([]);
@@ -110,7 +148,7 @@ export default function ImportLeadsClient() {
   return (
     <div className="max-w-7xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Import / Update Leads</h1>
+        <h1 className="text-3xl font-bold">Import Leads</h1>
         <p className="mt-1 text-slate-500">
           Super Admin only. Use this for your existing campaign data.
         </p>
@@ -119,9 +157,14 @@ export default function ImportLeadsClient() {
       <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
         <h2 className="font-bold text-blue-900">How it works</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-blue-800">
-          <li><strong>lead_id present</strong> → existing CRM lead is updated.</li>
-          <li><strong>lead_id blank</strong> → a new CRM lead is created.</li>
-          <li>Your existing duplicate model for new leads is not changed.</li>
+          <li>Every row creates a new CRM lead — existing leads are never changed.</li>
+          <li><strong>lead_id blank</strong> → a normal CRM Lead ID is generated.</li>
+          <li>
+            <strong>Duplicates are skipped</strong>: a Lead ID already in the CRM,
+            or a Mobile / Alternate Mobile / NMI matching an existing lead (same
+            campaign) or an earlier row in this CSV.
+          </li>
+          <li>assigned_agent / assigned_closer accept a user ID or employee ID.</li>
           <li>Historical Sold records are kept as Sold / Not Audited.</li>
         </ul>
 
@@ -186,7 +229,7 @@ export default function ImportLeadsClient() {
           disabled={loading || !rows.length}
           className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? "Importing / Updating..." : "Import / Update Leads"}
+          {loading ? "Importing..." : "Import Leads"}
         </button>
       </div>
 
@@ -195,40 +238,45 @@ export default function ImportLeadsClient() {
           <h2 className="text-lg font-bold">Import Result</h2>
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-lg bg-blue-50 p-4">
-              <p className="text-xs text-blue-700">Updated</p>
-              <p className="text-2xl font-bold text-blue-800">
-                {result.updated || 0}
+            <div className="rounded-lg bg-green-50 p-4">
+              <p className="text-xs text-green-700">Imported</p>
+              <p className="text-2xl font-bold text-green-800">
+                {result.inserted || 0}
               </p>
             </div>
 
-            <div className="rounded-lg bg-green-50 p-4">
-              <p className="text-xs text-green-700">New Records</p>
-              <p className="text-2xl font-bold text-green-800">
-                {result.inserted || 0}
+            <div className="rounded-lg bg-amber-50 p-4">
+              <p className="text-xs text-amber-700">Duplicates skipped</p>
+              <p className="text-2xl font-bold text-amber-800">
+                {result.duplicates?.length || 0}
               </p>
             </div>
 
             <div className="rounded-lg bg-red-50 p-4">
               <p className="text-xs text-red-700">Errors</p>
               <p className="text-2xl font-bold text-red-800">
-                {(result.failedUpdates || 0) + (result.error ? 1 : 0)}
+                {result.errors?.length || 0}
               </p>
             </div>
           </div>
 
-          {result.updateErrors?.length > 0 && (
-            <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4">
-              <p className="font-bold text-red-900">Update errors</p>
-              <div className="mt-2 space-y-1 text-sm text-red-800">
-                {result.updateErrors.slice(0, 20).map((item: any) => (
-                  <div key={item.lead_id}>
-                    {item.lead_id}: {item.error}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <IssueList
+            title="Duplicates skipped (not imported)"
+            items={result.duplicates}
+            tone="border-amber-300 bg-amber-50 text-amber-900"
+          />
+
+          <IssueList
+            title="Errors (not imported)"
+            items={result.errors}
+            tone="border-red-300 bg-red-50 text-red-900"
+          />
+
+          <IssueList
+            title="Warnings (imported)"
+            items={result.warnings}
+            tone="border-slate-300 bg-slate-50 text-slate-800"
+          />
         </div>
       )}
     </div>

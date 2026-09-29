@@ -1,8 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { LeadDuplicateIndex } from "@/lib/leadDuplicates";
 
 const clean = (v: any) => String(v ?? "").trim();
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+interface ImportIssue {
+  row: number;
+  lead_id: string | null;
+  customer_name: string | null;
+  reason: string;
+}
+
+// Every existing lead's duplicate-relevant fields, paged because
+// PostgREST caps a single response (1000 rows by default on Supabase).
+async function loadExistingLeads() {
+  const pageSize = 1000;
+  const leads: any[] = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await adminSupabase
+      .from("leads")
+      .select("lead_id, campaign, mobile, alternate_mobile, nmi")
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+
+    leads.push(...data);
+  }
+
+  return leads;
+}
 
 const campaignPrefix: Record<string, string> = {
   Energy: "FCSLID",
@@ -10,7 +43,14 @@ const campaignPrefix: Record<string, string> = {
   PHI: "FCSPH",
 };
 
-async function nextLeadIds(campaign: string, count: number) {
+// `reserved` = Lead IDs already claimed in this import (given in the CSV
+// or generated for another campaign group) so generated IDs never
+// collide with them.
+async function nextLeadIds(
+  campaign: string,
+  count: number,
+  reserved: string[] = []
+) {
   const prefix = campaignPrefix[campaign] || "FCSLID";
 
   const { data, error } = await adminSupabase
@@ -24,8 +64,11 @@ async function nextLeadIds(campaign: string, count: number) {
   if (error) throw new Error(error.message);
 
   let max = 0;
-  for (const row of data || []) {
-    const match = String(row.lead_id || "").match(new RegExp(`^${prefix}(\\d+)$`));
+  for (const leadId of [
+    ...(data || []).map((row) => String(row.lead_id || "")),
+    ...reserved,
+  ]) {
+    const match = leadId.toUpperCase().match(new RegExp(`^${prefix}(\\d+)$`));
     if (match) max = Math.max(max, Number(match[1]));
   }
 
@@ -144,105 +187,215 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const withLeadId = rows.filter((row: any) => clean(row.lead_id));
-    const withoutLeadId = rows.filter((row: any) => !clean(row.lead_id));
+    // Spreadsheet row number of a CSV data row (row 1 is the header).
+    const rowNumber = (index: number) => index + 2;
 
-    // Existing lead_id = UPDATE. This intentionally does not run a new
-    // duplicate model; the CRM's existing duplicate logic remains unchanged.
-    let updated = 0;
-    const updateErrors: any[] = [];
+    // ============================================================
+    // KNOWN LEADS — existing CRM leads seed the duplicate index; each
+    // accepted CSV row is added to it too, so duplicates inside the CSV
+    // are caught by the same check. Nothing existing is ever updated.
+    // ============================================================
 
-    // Batch-fetch each existing row's current status/closed_at up front
-    // (one query) so mapLead can tell a genuine status transition apart
-    // from a re-import of an unchanged status — see mapLead's closedAt
-    // comment above.
-    const existingByLeadId = new Map<
-      string,
-      { status: string | null; closed_at: string | null }
-    >();
+    const existingLeads = await loadExistingLeads();
 
-    if (withLeadId.length) {
-      const { data: existingRows } = await adminSupabase
-        .from("leads")
-        .select("lead_id, status, closed_at")
-        .in(
-          "lead_id",
-          withLeadId.map((row: any) => clean(row.lead_id))
-        );
+    const existingLeadIds = new Set(
+      existingLeads
+        .map((lead) => clean(lead.lead_id).toUpperCase())
+        .filter(Boolean)
+    );
 
-      for (const existingRow of existingRows || []) {
-        existingByLeadId.set(existingRow.lead_id, {
-          status: existingRow.status,
-          closed_at: existingRow.closed_at,
-        });
-      }
-    }
+    const duplicateIndex = new LeadDuplicateIndex();
 
-    for (const row of withLeadId) {
-      const payload = mapLead(
-        row,
-        clean(row.lead_id),
-        user.id,
-        existingByLeadId.get(clean(row.lead_id))
+    for (const lead of existingLeads) {
+      duplicateIndex.add(
+        lead.campaign,
+        lead,
+        `existing lead ${lead.lead_id || "(no Lead ID)"}`
       );
+    }
 
-      const { error } = await adminSupabase
-        .from("leads")
-        .update(payload)
-        .eq("lead_id", clean(row.lead_id));
+    // ============================================================
+    // ASSIGNMENT — assigned_agent/assigned_closer must be real profile
+    // UUIDs. An employee ID is converted to that person's UUID; any other
+    // value (e.g. a name like "PETER") is left unassigned with a warning.
+    // ============================================================
 
-      if (error) {
-        updateErrors.push({
-          lead_id: clean(row.lead_id),
-          error: error.message,
-        });
-      } else {
-        updated++;
+    const { data: people, error: peopleError } = await adminSupabase
+      .from("profiles")
+      .select("id, employee_id");
+
+    if (peopleError) throw new Error(peopleError.message);
+
+    const profileIds = new Set(
+      (people || []).map((person) => String(person.id).toLowerCase())
+    );
+
+    const profileIdByEmployeeId = new Map(
+      (people || [])
+        .filter((person) => clean(person.employee_id))
+        .map((person) => [
+          clean(person.employee_id).toUpperCase(),
+          String(person.id),
+        ])
+    );
+
+    function resolvePerson(value: string): string | null {
+      if (UUID_RE.test(value) && profileIds.has(value.toLowerCase())) {
+        return value.toLowerCase();
       }
+
+      return profileIdByEmployeeId.get(value.toUpperCase()) ?? null;
     }
 
-    // Rows without lead_id are NEW records. Generate normal CRM lead IDs.
-    const grouped: Record<string, any[]> = {};
-    for (const row of withoutLeadId) {
+    // ============================================================
+    // CHECK EVERY ROW
+    // ============================================================
+
+    const duplicates: ImportIssue[] = [];
+    const errors: ImportIssue[] = [];
+    const warnings: ImportIssue[] = [];
+    const accepted: { row: any; rowNumber: number }[] = [];
+    const csvLeadIds = new Map<string, number>();
+
+    rows.forEach((rawRow: any, index: number) => {
+      const row = { ...rawRow };
+      const number = rowNumber(index);
+      const leadId = clean(row.lead_id);
       const campaign = clean(row.campaign) || "Energy";
-      if (!grouped[campaign]) grouped[campaign] = [];
-      grouped[campaign].push(row);
+      const issue = {
+        row: number,
+        lead_id: leadId || null,
+        customer_name: clean(row.customer_name) || null,
+      };
+
+      const reasons: string[] = [];
+
+      if (leadId) {
+        const key = leadId.toUpperCase();
+
+        if (existingLeadIds.has(key)) {
+          reasons.push(`Lead ID ${leadId} already exists in the CRM`);
+        } else if (csvLeadIds.has(key)) {
+          reasons.push(
+            `Lead ID ${leadId} repeats row ${csvLeadIds.get(key)} in this CSV`
+          );
+        }
+      }
+
+      for (const match of duplicateIndex.find(campaign, row)) {
+        reasons.push(`${match.field} ${match.value} matches ${match.ref}`);
+      }
+
+      if (reasons.length) {
+        duplicates.push({ ...issue, reason: reasons.join("; ") });
+        return;
+      }
+
+      for (const field of ["assigned_agent", "assigned_closer"] as const) {
+        const value = clean(row[field]);
+
+        if (!value) continue;
+
+        const personId = resolvePerson(value);
+
+        if (!personId) {
+          warnings.push({
+            ...issue,
+            reason: `${field} "${value}" is not a CRM user ID or employee ID — left unassigned`,
+          });
+        }
+
+        row[field] = personId || "";
+      }
+
+      if (leadId) csvLeadIds.set(leadId.toUpperCase(), number);
+      duplicateIndex.add(campaign, row, `row ${number} in this CSV`);
+      accepted.push({ row: { ...row, campaign }, rowNumber: number });
+    });
+
+    // ============================================================
+    // LEAD IDs — rows with a (new) lead_id keep it; the rest get normal
+    // generated CRM IDs that never collide with the kept ones.
+    // ============================================================
+
+    const reservedLeadIds = accepted
+      .map((item) => clean(item.row.lead_id))
+      .filter(Boolean);
+
+    const grouped: Record<string, typeof accepted> = {};
+
+    for (const item of accepted) {
+      if (clean(item.row.lead_id)) continue;
+      if (!grouped[item.row.campaign]) grouped[item.row.campaign] = [];
+      grouped[item.row.campaign].push(item);
     }
 
-    const newRows: any[] = [];
+    const generatedLeadIds = new Map<number, string>();
 
-    for (const [campaign, campaignRows] of Object.entries(grouped)) {
-      const ids = await nextLeadIds(campaign, campaignRows.length);
-      campaignRows.forEach((row, index) => {
-        newRows.push(mapLead({ ...row, campaign }, ids[index], user.id));
+    for (const [campaign, items] of Object.entries(grouped)) {
+      const ids = await nextLeadIds(campaign, items.length, reservedLeadIds);
+
+      items.forEach((item, index) => {
+        generatedLeadIds.set(item.rowNumber, ids[index]);
       });
+
+      reservedLeadIds.push(...ids);
     }
+
+    const newRows = accepted.map((item) => ({
+      rowNumber: item.rowNumber,
+      payload: mapLead(
+        item.row,
+        generatedLeadIds.get(item.rowNumber) ?? null,
+        user.id
+      ),
+    }));
+
+    // ============================================================
+    // INSERT — in chunks; if a chunk is rejected, retry its rows one by
+    // one so a single bad row can't block every other valid row.
+    // ============================================================
 
     let inserted = 0;
-    let insertError: string | null = null;
+    const chunkSize = 500;
 
-    if (newRows.length) {
+    for (let start = 0; start < newRows.length; start += chunkSize) {
+      const chunk = newRows.slice(start, start + chunkSize);
+
       const { error } = await adminSupabase
         .from("leads")
-        .insert(newRows);
+        .insert(chunk.map((item) => item.payload));
 
-      if (error) {
-        insertError = error.message;
-      } else {
-        inserted = newRows.length;
+      if (!error) {
+        inserted += chunk.length;
+        continue;
+      }
+
+      for (const item of chunk) {
+        const { error: rowError } = await adminSupabase
+          .from("leads")
+          .insert(item.payload);
+
+        if (rowError) {
+          errors.push({
+            row: item.rowNumber,
+            lead_id: item.payload.lead_id,
+            customer_name: item.payload.customer_name,
+            reason: rowError.message,
+          });
+        } else {
+          inserted++;
+        }
       }
     }
 
     return NextResponse.json({
-      success: !insertError && updateErrors.length === 0,
-      updated,
+      success: errors.length === 0,
       inserted,
-      failedUpdates: updateErrors.length,
-      updateErrors,
-      error: insertError,
-      message: insertError
-        ? `Updated ${updated}, but new-record import failed: ${insertError}`
-        : `Import complete: ${updated} updated, ${inserted} new records.`,
+      duplicates,
+      errors,
+      warnings,
+      message: `Import complete: ${inserted} imported, ${duplicates.length} duplicate(s) skipped, ${errors.length} error(s).`,
     });
   } catch (error: any) {
     return NextResponse.json(
