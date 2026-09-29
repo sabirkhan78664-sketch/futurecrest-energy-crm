@@ -24,7 +24,13 @@ interface AssignmentSectionProps {
   creator?: any;
 }
 
-// Readable option label: name plus employee ID, never the profile UUID.
+// Dropdown option text: full name only — no employee ID, role or UUID.
+// (Employee ID is still searchable via filterPeople below.)
+function optionLabel(person: any) {
+  return person?.full_name || person?.username || "Unnamed user";
+}
+
+// Name plus employee ID, used for the read-only "Created by" line.
 function personLabel(person: any) {
   const name =
     person?.full_name || person?.username || "Unnamed user";
@@ -72,8 +78,17 @@ export default function AssignmentSection({
   const [agentSearch, setAgentSearch] = useState("");
   const [closerSearch, setCloserSearch] = useState("");
 
+  // Anyone who can be the working agent: Agents / Channel Partners plus
+  // Closers — a Closer can be both Assigned Agent and Assigned Closer.
+  const agentPeople = [
+    ...agents,
+    ...closers.filter(
+      (closer) => !agents.some((agent) => agent.id === closer.id)
+    ),
+  ].sort((a, b) => optionLabel(a).localeCompare(optionLabel(b)));
+
   const visibleAgents = filterPeople(
-    agents,
+    agentPeople,
     agentSearch,
     assignedAgent
   );
@@ -122,7 +137,7 @@ export default function AssignmentSection({
                 key={agent.id}
                 value={agent.id}
               >
-                {personLabel(agent)}
+                {optionLabel(agent)}
               </option>
             ))}
           </select>
@@ -172,7 +187,7 @@ export default function AssignmentSection({
                 key={closer.id}
                 value={closer.id}
               >
-                {personLabel(closer)}
+                {optionLabel(closer)}
               </option>
             ))}
           </select>
