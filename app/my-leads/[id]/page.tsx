@@ -146,14 +146,12 @@ export default async function MyLeadPage({ params }: Props) {
                   <div>
                     <p className="text-xs uppercase text-gray-500">Assigned Agent</p>
                     <p className="font-semibold">{assignedAgent?.full_name || "-"}</p>
-                    {assignedAgent?.employee_id && <p className="text-xs text-slate-500">{assignedAgent.employee_id}</p>}
                   </div>
                   <div>
                     <p className="text-xs uppercase text-gray-500">Assigned Closer</p>
                     {assignedCloser ? (
                       <>
                         <p className="font-semibold">{assignedCloser.full_name || "-"}</p>
-                        {assignedCloser.employee_id && <p className="text-xs text-slate-500">{assignedCloser.employee_id}</p>}
                       </>
                     ) : (
                       <p className="font-semibold text-amber-700">Waiting for Assignment</p>

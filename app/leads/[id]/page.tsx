@@ -28,7 +28,7 @@ function InfoRow({
   const displayValue = empty
     ? "-"
     : typeof value === "object" && !isValidElement(value)
-      ? (value as any)?.full_name || (value as any)?.username || (value as any)?.employee_id || "-"
+      ? (value as any)?.full_name || (value as any)?.username || "-"
       : value;
 
   return (
@@ -61,33 +61,14 @@ function PersonValue({
     return value;
   }
 
+  // Full name only — employee IDs are not displayed.
   const name =
     value.full_name ||
     value.name ||
     value.username ||
-    value.email ||
-    value.employee_id;
+    value.email;
 
-  const employeeId =
-    value.employee_id &&
-    value.employee_id !== name
-      ? value.employee_id
-      : null;
-
-  if (!name && !employeeId) {
-    return "-";
-  }
-
-  return (
-    <span className="inline-flex flex-col leading-tight">
-      <span>{name || "-"}</span>
-      {employeeId && (
-        <span className="text-xs font-normal text-slate-500">
-          {employeeId}
-        </span>
-      )}
-    </span>
-  );
+  return name || "-";
 }
 
 function Section({

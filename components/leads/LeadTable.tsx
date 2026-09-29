@@ -575,17 +575,13 @@ export default function LeadTable({
 
                   {!isAgent && (
                     <>
-                      <td className="px-4 py-3 text-xs">
+                      {/* Full name only — no employee ID. */}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
 
                         {lead.agent ? (
-                          <>
-                            {lead.agent.full_name}
-                            {lead.agent.employee_id && (
-                              <span className="block text-[11px] text-slate-400">
-                                {lead.agent.employee_id}
-                              </span>
-                            )}
-                          </>
+                          lead.agent.full_name ||
+                          lead.agent.username ||
+                          "Agent"
                         ) : lead.agent_name ? (
                           <>
                             {lead.agent_name}
@@ -597,18 +593,9 @@ export default function LeadTable({
                         ) : lead.creator &&
                           // A Closer creator already shows as Assigned Closer.
                           lead.creator.role !== "Closer" ? (
-                          <>
-                            {lead.creator.full_name ||
-                              lead.creator.employee_id ||
-                              lead.creator.username ||
-                              "Agent"}
-                            {lead.creator.full_name &&
-                              lead.creator.employee_id && (
-                                <span className="block text-[11px] text-slate-400">
-                                  {lead.creator.employee_id}
-                                </span>
-                              )}
-                          </>
+                          lead.creator.full_name ||
+                          lead.creator.username ||
+                          "Agent"
                         ) : (
                           <span className="text-gray-400">
                             Unknown
@@ -625,20 +612,11 @@ export default function LeadTable({
 
                       {/* ASSIGNED CLOSER */}
 
-                      <td className="px-4 py-3 text-xs">
+                      <td className="whitespace-nowrap px-4 py-3 text-xs">
                         {lead.closer ? (
-                          <>
-                            {lead.closer.full_name ||
-                              lead.closer.employee_id ||
-                              lead.closer.username ||
-                              "Closer"}
-                            {lead.closer.full_name &&
-                              lead.closer.employee_id && (
-                                <span className="block text-[11px] text-slate-400">
-                                  {lead.closer.employee_id}
-                                </span>
-                              )}
-                          </>
+                          lead.closer.full_name ||
+                          lead.closer.username ||
+                          "Closer"
                         ) : (
                           <span className="text-gray-400">
                             Unassigned

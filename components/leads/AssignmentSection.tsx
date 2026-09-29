@@ -24,20 +24,11 @@ interface AssignmentSectionProps {
   creator?: any;
 }
 
-// Dropdown option text: full name only — no employee ID, role or UUID.
-// (Employee ID is still searchable via filterPeople below.)
+// Displayed person text (dropdown options and "Created by"): full name
+// only — no employee ID or UUID. Employee ID is still searchable via
+// filterPeople below.
 function optionLabel(person: any) {
   return person?.full_name || person?.username || "Unnamed user";
-}
-
-// Name plus employee ID, used for the read-only "Created by" line.
-function personLabel(person: any) {
-  const name =
-    person?.full_name || person?.username || "Unnamed user";
-
-  return person?.employee_id
-    ? `${name} (${person.employee_id})`
-    : name;
 }
 
 // Filters by name / employee ID / username, always keeping the currently
@@ -249,7 +240,7 @@ export default function AssignmentSection({
         <p className="mt-4 text-xs text-slate-500">
           Created by{" "}
           <span className="font-semibold text-slate-700">
-            {personLabel(creator)}
+            {optionLabel(creator)}
           </span>
           {creator.role ? ` · ${creator.role}` : ""}
         </p>

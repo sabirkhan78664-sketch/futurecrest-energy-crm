@@ -1358,20 +1358,13 @@ export default function CloserProcessLeadPage() {
 
                   <Info
                     label="Assigned Agent"
-                    value={
-                      lead.agent?.full_name
-                        ? `${lead.agent.full_name}${lead.agent.employee_id ? ` (${lead.agent.employee_id})` : ""}`
-                        : lead.assigned_agent
-                    }
+                    // Full name only — no employee ID or raw UUID.
+                    value={lead.agent?.full_name}
                   />
 
                   <Info
                     label="Assigned Closer"
-                    value={
-                      lead.closer?.full_name
-                        ? `${lead.closer.full_name}${lead.closer.employee_id ? ` (${lead.closer.employee_id})` : ""}`
-                        : lead.assigned_closer
-                    }
+                    value={lead.closer?.full_name}
                   />
 
                   <Info

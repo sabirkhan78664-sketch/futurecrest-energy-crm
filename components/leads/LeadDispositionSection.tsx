@@ -91,15 +91,10 @@ function PersonSummary({
         {label}
       </p>
 
+      {/* Full name only — employee IDs are not displayed. */}
       <p className="mt-1 text-sm font-semibold text-slate-800">
         {person?.full_name || "-"}
       </p>
-
-      {person?.employee_id && (
-        <p className="text-xs text-slate-500">
-          {person.employee_id}
-        </p>
-      )}
     </div>
   );
 }
