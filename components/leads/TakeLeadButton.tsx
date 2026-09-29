@@ -34,6 +34,13 @@ export default function TakeLeadButton({
         return;
       }
 
+      // Super Admin: the lead is opened for processing instead of
+      // being assigned to them.
+      if (result.openUrl) {
+        router.push(result.openUrl);
+        return;
+      }
+
       router.refresh();
     } catch (err) {
       console.error("Take Lead error:", err);

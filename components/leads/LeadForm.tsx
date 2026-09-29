@@ -2187,8 +2187,12 @@ setDncr={setDncrNumber}
               setAssignedAgent
             }
 
+            // A Closer creating a lead becomes its Assigned Closer
+            // server-side (app/api/leads/route.ts) — show that here.
             assignedCloser={
-              assignedCloser
+              !isEdit && currentRole === "Closer"
+                ? currentUserId
+                : assignedCloser
             }
 
             setAssignedCloser={
@@ -2212,6 +2216,10 @@ setDncr={setDncrNumber}
             canReassign={
               currentRole === "Admin" ||
               currentRole === "Super Admin"
+            }
+
+            creator={
+              isEdit ? initialData?.creator : null
             }
           />
         )}

@@ -328,6 +328,16 @@ export async function POST(req: NextRequest) {
       verifiedRole === "Admin" ||
       verifiedRole === "Super Admin";
 
+    // A Closer who creates a lead owns it as its Assigned Closer, the
+    // same way an Agent owns theirs as Assigned Agent. Admin/Super Admin
+    // keep choosing the closer (or none) explicitly.
+    const initialCloser =
+      verifiedRole === "Closer"
+        ? verifiedUserId
+        : isAdmin
+          ? body.assigned_closer || null
+          : null;
+
     // ============================================================
     // CAMPAIGN-SPECIFIC LEAD ID GENERATOR
     //
@@ -725,23 +735,23 @@ export async function POST(req: NextRequest) {
                 ? verifiedUserId
                 : null,
 
+            // Agent-created leads stay closer-less until a Closer
+            // takes / is assigned the lead.
             assigned_closer:
-              isAdmin
-                ? body.assigned_closer
-                : null,
+              initialCloser,
 
             assignment_status:
-              isAdmin && body.assigned_closer
+              initialCloser
                 ? "Assigned"
                 : "Unassigned",
 
             assigned_at:
-              isAdmin && body.assigned_closer
+              initialCloser
                 ? new Date().toISOString()
                 : null,
 
             assigned_by:
-              isAdmin && body.assigned_closer
+              initialCloser
                 ? verifiedUserId
                 : null,
 

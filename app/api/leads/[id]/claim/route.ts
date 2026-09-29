@@ -46,6 +46,31 @@ export async function POST(
       );
     }
 
+    // Super Admin "takes" a lead only to open it for processing/editing —
+    // never becomes its Assigned Agent/Closer as a side effect, so the
+    // existing assignments stay intact. They can still change either
+    // assignment deliberately from the edit form.
+    if (profile.role === "Super Admin") {
+      const { data: existing } = await adminSupabase
+        .from("leads")
+        .select("*")
+        .eq("id", leadId)
+        .maybeSingle();
+
+      if (!existing) {
+        return NextResponse.json(
+          { success: false, message: "Lead not found." },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        lead: existing,
+        openUrl: `/leads/${leadId}/edit`,
+      });
+    }
+
     const { data, error } = await adminSupabase
       .from("leads")
       .update({

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 interface AssignmentSectionProps {
   agents: any[];
   closers: any[];
@@ -13,6 +17,41 @@ interface AssignmentSectionProps {
 
   isAgent: boolean;
   canReassign: boolean;
+
+  // The lead's original creator (created_by, enriched by getLead()) —
+  // shown read-only so the owner stays identifiable even after either
+  // assignment is changed.
+  creator?: any;
+}
+
+// Readable option label: name plus employee ID, never the profile UUID.
+function personLabel(person: any) {
+  const name =
+    person?.full_name || person?.username || "Unnamed user";
+
+  return person?.employee_id
+    ? `${name} (${person.employee_id})`
+    : name;
+}
+
+// Filters by name / employee ID / username, always keeping the currently
+// selected person so the select never loses its displayed value.
+function filterPeople(
+  people: any[],
+  query: string,
+  selectedId: string
+) {
+  const q = query.trim().toLowerCase();
+
+  if (!q) return people;
+
+  return people.filter(
+    (person) =>
+      person.id === selectedId ||
+      [person.full_name, person.employee_id, person.username].some(
+        (value) => String(value || "").toLowerCase().includes(q)
+      )
+  );
 }
 
 export default function AssignmentSection({
@@ -26,8 +65,24 @@ export default function AssignmentSection({
   setStatus,
   isAgent,
   canReassign,
+  creator,
 }: AssignmentSectionProps) {
   const assignmentLocked = isAgent || !canReassign;
+
+  const [agentSearch, setAgentSearch] = useState("");
+  const [closerSearch, setCloserSearch] = useState("");
+
+  const visibleAgents = filterPeople(
+    agents,
+    agentSearch,
+    assignedAgent
+  );
+
+  const visibleClosers = filterPeople(
+    closers,
+    closerSearch,
+    assignedCloser
+  );
 
   return (
     <section>
@@ -44,6 +99,16 @@ export default function AssignmentSection({
             Assigned Agent
           </label>
 
+          {!assignmentLocked && (
+            <input
+              type="search"
+              value={agentSearch}
+              onChange={(e) => setAgentSearch(e.target.value)}
+              placeholder="Search name or employee ID"
+              className="mb-2 h-9 w-full rounded-lg border px-3 text-sm"
+            />
+          )}
+
           <select
             value={assignedAgent}
             onChange={(e) => setAssignedAgent(e.target.value)}
@@ -52,12 +117,12 @@ export default function AssignmentSection({
           >
             <option value="">Select Agent</option>
 
-            {agents.map((agent) => (
+            {visibleAgents.map((agent) => (
               <option
                 key={agent.id}
                 value={agent.id}
               >
-                {agent.full_name}
+                {personLabel(agent)}
               </option>
             ))}
           </select>
@@ -82,6 +147,16 @@ export default function AssignmentSection({
             Assigned Closer
           </label>
 
+          {!assignmentLocked && (
+            <input
+              type="search"
+              value={closerSearch}
+              onChange={(e) => setCloserSearch(e.target.value)}
+              placeholder="Search name or employee ID"
+              className="mb-2 h-9 w-full rounded-lg border px-3 text-sm"
+            />
+          )}
+
           <select
             value={assignedCloser}
             onChange={(e) => setAssignedCloser(e.target.value)}
@@ -92,12 +167,12 @@ export default function AssignmentSection({
               Select Closer
             </option>
 
-            {closers.map((closer) => (
+            {visibleClosers.map((closer) => (
               <option
                 key={closer.id}
                 value={closer.id}
               >
-                {closer.full_name}
+                {personLabel(closer)}
               </option>
             ))}
           </select>
@@ -154,6 +229,16 @@ export default function AssignmentSection({
         </div>
 
       </div>
+
+      {creator && (
+        <p className="mt-4 text-xs text-slate-500">
+          Created by{" "}
+          <span className="font-semibold text-slate-700">
+            {personLabel(creator)}
+          </span>
+          {creator.role ? ` · ${creator.role}` : ""}
+        </p>
+      )}
     </section>
   );
 }

@@ -418,6 +418,9 @@ export default async function LeadDetailsPage({
               value={lead.assignment_status}
             />
 
+            {/* Profiles only — never fall back to the raw
+                assigned_agent/assigned_closer UUIDs. A Closer creator
+                is shown as Assigned Closer, not as the Agent. */}
             <InfoRow
               label="Agent"
               value={
@@ -425,8 +428,9 @@ export default async function LeadDetailsPage({
                   person={
                     lead.assignedAgent ||
                     lead.agent ||
-                    lead.creator ||
-                    lead.assigned_agent ||
+                    (lead.creator?.role !== "Closer"
+                      ? lead.creator
+                      : null) ||
                     lead.agent_name
                   }
                 />
@@ -437,10 +441,7 @@ export default async function LeadDetailsPage({
               label="Assigned Closer"
               value={
                 <PersonValue
-                  person={
-                    lead.closer ||
-                    lead.assigned_closer
-                  }
+                  person={lead.closer}
                 />
               }
             />
