@@ -5,6 +5,10 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchUnreadMessageCount,
+  UNREAD_MESSAGES_EVENT,
+} from "@/lib/unreadMessages";
 
 import {
   LayoutDashboard,
@@ -59,27 +63,16 @@ export default function Sidebar({
      LOAD UNREAD MESSAGES
   ============================================================ */
 
+  // Server-side count for the logged-in user — a browser query on
+  // crm_messages is blocked by RLS and always returned 0.
   async function loadUnreadCount() {
     if (!profile.id) return;
 
-    const { count, error } = await supabase
-      .from("crm_messages")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("receiver_id", profile.id)
-      .eq("is_read", false);
+    const count = await fetchUnreadMessageCount();
 
-    if (error) {
-      console.error(
-        "Sidebar unread message count error:",
-        error
-      );
-      return;
+    if (count !== null) {
+      setUnreadCount(count);
     }
-
-    setUnreadCount(count ?? 0);
   }
 
   /* ============================================================
@@ -91,6 +84,18 @@ export default function Sidebar({
 
     loadUnreadCount();
   }, [profile.id, pathname]);
+
+  // Messages page signals when it marks messages read.
+  useEffect(() => {
+    if (!profile.id) return;
+
+    const refresh = () => void loadUnreadCount();
+
+    window.addEventListener(UNREAD_MESSAGES_EVENT, refresh);
+
+    return () =>
+      window.removeEventListener(UNREAD_MESSAGES_EVENT, refresh);
+  }, [profile.id]);
 
   /* ============================================================
      REALTIME MESSAGE COUNT

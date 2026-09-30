@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import {
+  fetchUnreadMessageCount,
+  UNREAD_MESSAGES_EVENT,
+} from "@/lib/unreadMessages";
 
 import {
   Bell,
@@ -66,30 +70,20 @@ export default function HeaderNav({
    * ============================================================
    */
 
+  // Server-side count for the logged-in user — a browser query on
+  // crm_messages is blocked by RLS and always returned 0.
   async function loadUnreadCount() {
     if (!profile?.id) {
       setUnreadMsgCount(0);
       return;
     }
 
-    const { count, error } = await supabase
-      .from("crm_messages")
-      .select("id", {
-        count: "exact",
-        head: true,
-      })
-      .eq("receiver_id", profile.id)
-      .eq("is_read", false);
+    const count =
+      await fetchUnreadMessageCount();
 
-    if (error) {
-      console.error(
-        "Unread message count error:",
-        error
-      );
-      return;
+    if (count !== null) {
+      setUnreadMsgCount(count);
     }
-
-    setUnreadMsgCount(count ?? 0);
   }
 
   /*
@@ -103,6 +97,24 @@ export default function HeaderNav({
 
     loadUnreadCount();
   }, [profile?.id, pathname]);
+
+  // Messages page signals when it marks messages read.
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const refresh = () => void loadUnreadCount();
+
+    window.addEventListener(
+      UNREAD_MESSAGES_EVENT,
+      refresh
+    );
+
+    return () =>
+      window.removeEventListener(
+        UNREAD_MESSAGES_EVENT,
+        refresh
+      );
+  }, [profile?.id]);
 
   /*
    * ============================================================

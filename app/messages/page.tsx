@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { usePresence } from "@/components/layout/PresenceProvider";
+import { notifyUnreadMessagesChanged } from "@/lib/unreadMessages";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -377,6 +378,9 @@ function MessagesContent() {
             : x
         )
       );
+
+      // Refresh the header/sidebar unread badges.
+      notifyUnreadMessagesChanged();
     } catch (error) {
       console.error(
         "Failed to mark direct chat as read:",
