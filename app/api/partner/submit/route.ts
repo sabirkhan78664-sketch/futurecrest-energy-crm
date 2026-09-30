@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
     if (!postcode) missing.push("postcode");
     if (!dncrNumber) missing.push("dncr_number");
     if (!agentName) missing.push("agent_name");
+    if (!String(body.dob ?? "").trim()) missing.push("dob");
 
     if (dncrNumber && !/^\d+$/.test(dncrNumber)) {
       return NextResponse.json(

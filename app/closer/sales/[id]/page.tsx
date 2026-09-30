@@ -311,6 +311,12 @@ export default function CloserProcessLeadPage() {
   async function saveLeadEdits() {
     if (!lead) return;
 
+    // Mandatory for every campaign — also enforced by the edit API.
+    if (!String(form.dob || "").trim()) {
+      alert("Date of Birth is required.");
+      return;
+    }
+
     try {
       setSavingEdits(true);
       setError("");
@@ -713,7 +719,7 @@ export default function CloserProcessLeadPage() {
                   />
 
                   <EditableField
-                    label="Date of Birth"
+                    label="Date of Birth *"
                     type="date"
                     value={form.dob}
                     editing={editing}

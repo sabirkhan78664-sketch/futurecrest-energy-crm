@@ -9,6 +9,8 @@ interface PHISectionProps {
   setMobile: (value: string) => void;
   email: string;
   setEmail: (value: string) => void;
+  dob: string;
+  setDob: (value: string) => void;
   state: string;
   setState: (value: string) => void;
   dncr: string;
@@ -44,6 +46,8 @@ export default function PHISection({
   setMobile,
   email,
   setEmail,
+  dob,
+  setDob,
   state,
   setState,
   dncr,
@@ -80,6 +84,20 @@ export default function PHISection({
         <Field label="Last Name" value={lastName} setValue={setLastName} />
         <Field label="Mobile" value={mobile} setValue={setMobile} />
         <Field label="Email" value={email} setValue={setEmail} type="email" />
+
+        <div>
+          <label className="mb-2 block text-sm font-medium">
+            Date of Birth <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            value={dob || ""}
+            onChange={(e) => setDob(e.target.value)}
+            required
+            className="h-11 w-full rounded-xl border border-slate-300 px-4"
+          />
+        </div>
+
         <Field label="State" value={state} setValue={setState} />
         <Field label="Current Fund" value={currentFund} setValue={setCurrentFund} />
 

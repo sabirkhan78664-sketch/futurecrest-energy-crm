@@ -93,6 +93,18 @@ export async function PATCH(
       body.assigned_by = body.assigned_closer ? profile.id : null;
     }
 
+    // Date of Birth is mandatory: a save that includes dob (the Edit Lead
+    // form and the Closer's Process Lead form both send it) can't leave
+    // it empty — including an older lead that never had one. Callers that
+    // don't send dob at all are unaffected, and existing values are never
+    // changed here.
+    if ("dob" in body && !String(body.dob ?? "").trim()) {
+      return NextResponse.json(
+        { success: false, message: "Date of Birth is required." },
+        { status: 400 }
+      );
+    }
+
     // Postgres date/time columns reject an empty string ("" is not a
     // valid date) — every caller of this route (the admin LeadForm edit,
     // the Closer's Process Lead save, etc.) builds its form state with

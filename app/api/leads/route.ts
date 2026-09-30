@@ -92,6 +92,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Date of Birth is mandatory for every campaign (Energy/NBN/PHI).
+    if (!String(body.dob ?? "").trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Date of Birth is required.",
+        },
+        { status: 400 }
+      );
+    }
+
     // ============================================================
     // DUPLICATE CHECK
     // ============================================================

@@ -787,6 +787,18 @@ export default function LeadForm({
     }
 
     /* ==========================================================
+       DATE OF BIRTH — mandatory for every campaign, including when
+       editing an older lead that doesn't have one yet.
+    ========================================================== */
+
+    const dobValue = campaign === "NBN" ? nbnDob : dob;
+
+    if (!String(dobValue || "").trim()) {
+      alert("Date of Birth is required.");
+      return false;
+    }
+
+    /* ==========================================================
        DNCR
     ========================================================== */
 
@@ -919,12 +931,11 @@ export default function LeadForm({
         ? phiState
         : state;
 
+    // PHI shares the Energy `dob` state (PHISection has its own DOB input).
     const finalDob =
       campaign === "NBN"
         ? nbnDob || null
-        : campaign === "PHI"
-          ? null
-          : dob || null;
+        : dob || null;
 
     try {
       /* ==========================================================
@@ -1966,6 +1977,9 @@ export default function LeadForm({
             setEmail={
               setPhiEmail
             }
+
+            dob={dob}
+            setDob={setDob}
 
             state={
               phiState

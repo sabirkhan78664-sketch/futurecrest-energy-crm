@@ -65,11 +65,14 @@ export default function NBNSection({
         <Field label="Email" value={email} setValue={setEmail} type="email" />
 
         <div>
-          <label className="mb-2 block text-sm font-medium">Date of Birth</label>
+          <label className="mb-2 block text-sm font-medium">
+            Date of Birth <span className="text-red-500">*</span>
+          </label>
           <input
             type="date"
             value={dob || ""}
             onChange={(e) => setDob(e.target.value)}
+            required
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
         </div>

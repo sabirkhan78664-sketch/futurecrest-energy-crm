@@ -138,13 +138,14 @@ export default function CustomerSection({
         {/* DOB */}
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-800">
-            Date of Birth
+            Date of Birth <span className="text-red-500">*</span>
           </label>
 
           <input
             type="date"
             value={dob || ""}
             onChange={(e) => setDob(e.target.value)}
+            required
             className="h-11 w-full rounded-xl border border-slate-300 px-4"
           />
         </div>
