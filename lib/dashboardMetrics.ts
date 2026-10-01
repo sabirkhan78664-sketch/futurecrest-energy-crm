@@ -1,39 +1,16 @@
 import { adminSupabase } from "@/lib/admin";
-import { getZonedTodayStart } from "@/lib/timezone";
+import { getPeriodRange, type CustomRange } from "@/lib/timezone";
 
 // =========================
 // PERIOD FILTER
 // =========================
 
-function getPeriodStart(period: string): string | null {
-  const now = new Date();
+type PeriodBounds = { start: string; end: string } | null;
 
-  if (period === "today") {
-    return getZonedTodayStart(
-      "Asia/Kolkata"
-    ).toISOString();
-  }
-
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 7);
-
-    return start.toISOString();
-  }
-
-  if (period === "month") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 30);
-
-    return start.toISOString();
-  }
-
-  return null;
-}
-
-function applyPeriod(query: any, periodStart: string | null) {
-  return periodStart
-    ? query.gte("created_at", periodStart)
+// Calendar range from getPeriodRange(): start inclusive, end exclusive.
+function applyPeriod(query: any, range: PeriodBounds) {
+  return range
+    ? query.gte("created_at", range.start).lt("created_at", range.end)
     : query;
 }
 
@@ -41,21 +18,29 @@ function applyPeriod(query: any, periodStart: string | null) {
 // actually recorded the outcome (closed_at), not by created_at — an old
 // lead sold today is a today's sale, not a sale from whenever it was
 // first created.
-function applyClosedPeriod(query: any, periodStart: string | null) {
-  return periodStart
-    ? query.gte("closed_at", periodStart)
+function applyClosedPeriod(query: any, range: PeriodBounds) {
+  return range
+    ? query.gte("closed_at", range.start).lt("closed_at", range.end)
     : query;
 }
 
 export async function getDashboardMetrics(
-  period: string = "all"
+  period: string = "all",
+  custom?: CustomRange
 ) {
   // Dashboard metrics are management-wide metrics. Use the service-role
   // client so RLS cannot make the Pending Approval count differ from the
   // actual Pending Approvals page for Admin/Super Admin.
   const supabase = adminSupabase;
 
-  const periodStart = getPeriodStart(period);
+  const bounds = getPeriodRange(period, undefined, undefined, custom);
+
+  const periodStart: PeriodBounds = bounds
+    ? {
+        start: bounds.start.toISOString(),
+        end: bounds.end.toISOString(),
+      }
+    : null;
 
   const [
     totalResult,

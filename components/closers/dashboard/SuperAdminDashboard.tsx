@@ -1,6 +1,7 @@
 import { getDashboardMetrics } from "@/lib/dashboardMetrics";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import Link from "next/link";
+import DashboardPeriodTabs from "@/components/dashboard/DashboardPeriodTabs";
 import StateClocks from "@/components/dashboard/StateClocks";
 
 import {
@@ -144,34 +145,40 @@ function BarRow({
 }
 
 /* ============================================================
-   TIME FILTER TABS
-============================================================ */
-
-const PERIOD_TABS: { key: string; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
-  { key: "month", label: "This month" },
-  { key: "all", label: "All time" },
-];
-
-/* ============================================================
    DASHBOARD
 ============================================================ */
 
 export default async function SuperAdminDashboard({
   period = "today",
+  from = "",
+  to = "",
 }: {
   period?: string;
+  from?: string;
+  to?: string;
 }) {
-  const metrics = await getDashboardMetrics(period);
+  const metrics = await getDashboardMetrics(period, { from, to });
 
   // Carries the selected period through to every card link, so the
   // destination page (e.g. /leads?status=Sold) shows the same set of
   // leads the card's number was computed from, not the full all-time set.
   function withPeriod(path: string) {
     if (period === "all") return path;
-    return `${path}${path.includes("?") ? "&" : "?"}period=${period}`;
+    const custom =
+      period === "custom" ? `&from=${from}&to=${to}` : "";
+
+    return `${path}${path.includes("?") ? "&" : "?"}period=${period}${custom}`;
   }
+
+  // Export follows the selected dashboard period (custom included).
+  const exportParams = new URLSearchParams({ period });
+
+  if (period === "custom") {
+    exportParams.set("period_from", from);
+    exportParams.set("period_to", to);
+  }
+
+  const exportHref = `/api/leads/export?${exportParams.toString()}`;
 
   const supabase = await createSupabaseServerClient();
 
@@ -272,26 +279,10 @@ export default async function SuperAdminDashboard({
 
         <div className="flex flex-wrap items-center gap-3">
 
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-
-            {PERIOD_TABS.map((tab) => (
-              <Link
-                key={tab.key}
-                href={`/dashboard?period=${tab.key}`}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                  period === tab.key
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label}
-              </Link>
-            ))}
-
-          </div>
+          <DashboardPeriodTabs period={period} from={from} to={to} />
 
           <a
-            href="/api/leads/export"
+            href={exportHref}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
             <Download size={16} />

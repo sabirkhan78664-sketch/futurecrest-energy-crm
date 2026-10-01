@@ -6,17 +6,21 @@ import LeadsRealtimeRefresher from "@/components/leads/LeadsRealtimeRefresher";
 
 import SuperAdminDashboard from "@/components/closers/dashboard/SuperAdminDashboard";
 import QADashboard from "@/components/closers/dashboard/QADashboard";
+import DashboardPeriodTabs from "@/components/dashboard/DashboardPeriodTabs";
+import { validateCustomRange } from "@/lib/timezone";
 
 interface DashboardPageProps {
   searchParams: Promise<{
     period?: string;
+    from?: string;
+    to?: string;
   }>;
 }
 
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps) {
-  const { period = "today" } = await searchParams;
+  const { period = "today", from = "", to = "" } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
 
@@ -59,6 +63,25 @@ export default async function DashboardPage({
     redirect("/agent");
   }
 
+  // An invalid Custom range must never behave like "All time": show the
+  // validation message (inside the period bar) and run no dashboard query.
+  const invalidCustom =
+    period === "custom" && validateCustomRange({ from, to });
+
+  if (invalidCustom) {
+    return (
+      <MainLayout>
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <DashboardPeriodTabs period={period} from={from} to={to} />
+          <p className="text-sm text-slate-500">
+            Select a valid start and end date to view the dashboard.
+          </p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <LeadsRealtimeRefresher />
@@ -75,11 +98,11 @@ export default async function DashboardPage({
 
         {/* SUPER ADMIN / ADMIN */}
         {(role === "Super Admin" || role === "Admin") && (
-          <SuperAdminDashboard period={period} />
+          <SuperAdminDashboard period={period} from={from} to={to} />
         )}
 
         {/* QA */}
-        {role === "QA" && <QADashboard period={period} />}
+        {role === "QA" && <QADashboard period={period} from={from} to={to} />}
 
       </div>
     </MainLayout>

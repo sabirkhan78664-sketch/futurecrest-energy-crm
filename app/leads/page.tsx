@@ -13,6 +13,8 @@ interface LeadsPageProps {
     status?: string;
     campaign?: string;
     period?: string;
+    from?: string;
+    to?: string;
   }>;
 }
 
@@ -63,6 +65,11 @@ export default async function LeadsPage({
       typeof params?.period === "string" && params.period.trim()
         ? params.period.trim().toLowerCase()
         : "today",
+    // Only used when period=custom (dashboard Custom range links).
+    periodFrom:
+      typeof params?.from === "string" ? params.from.trim() : "",
+    periodTo:
+      typeof params?.to === "string" ? params.to.trim() : "",
   };
 
   // ============================================================

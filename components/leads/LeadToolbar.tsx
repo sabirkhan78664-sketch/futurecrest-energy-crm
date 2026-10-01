@@ -49,6 +49,8 @@ interface Props {
   setChannelName: (value: string[]) => void;
 
   period: string;
+  periodFrom?: string;
+  periodTo?: string;
   // Set only while the search box has text: the exact lead ids the table
   // is showing, so the export matches it (the table ignores filters then).
   searchResultIds?: number[] | null;
@@ -72,6 +74,8 @@ export default function LeadToolbar({
   channelName,
   setChannelName,
   period,
+  periodFrom = "",
+  periodTo = "",
   searchResultIds = null,
   setPeriod,
   uniqueAgents,
@@ -122,6 +126,11 @@ export default function LeadToolbar({
   channelName.forEach((value) => exportParams.append("channel_name", value));
   // Same period the table is showing (server applies getPeriodRange).
   exportParams.append("period", period);
+
+  if (period === "custom") {
+    exportParams.append("period_from", periodFrom);
+    exportParams.append("period_to", periodTo);
+  }
   const exportHref = `/api/leads/export${
     exportParams.toString() ? `?${exportParams.toString()}` : ""
   }`;

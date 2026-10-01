@@ -70,6 +70,8 @@ export function getZonedTodayStart(
 //   week  = Monday through Saturday (Sunday excluded). On a Sunday it
 //           stays the Monday-Saturday week that just finished.
 //   month = 1st of the month up to the 1st of the next month
+//   yesterday / last_week / last_month = the previous such period
+//   custom = from/to dates, both included
 // ============================================================
 
 function zonedParts(timeZone: string, instant: Date) {
@@ -133,12 +135,82 @@ function zonedMidnight(
   return new Date(result);
 }
 
+export interface CustomRange {
+  // Inclusive calendar dates in the business timezone, "YYYY-MM-DD".
+  from?: string | null;
+  to?: string | null;
+}
+
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function parseDateOnly(value?: string | null) {
+  const match = DATE_RE.exec(String(value ?? "").trim());
+
+  if (!match) return null;
+
+  const [year, month, day] = [
+    Number(match[1]),
+    Number(match[2]),
+    Number(match[3]),
+  ];
+
+  // Reject impossible dates such as 2026-02-31.
+  const check = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+// Supported periods: today, yesterday, week, last_week, month,
+// last_month, custom ("all"/anything else = null = no restriction).
+// `custom` is only read for period === "custom"; existing callers that
+// pass just a period (or period/timeZone/now) are unaffected.
 export function getPeriodRange(
   period: string,
   timeZone: string = "Asia/Kolkata",
-  now: Date = new Date()
+  now: Date = new Date(),
+  custom?: CustomRange
 ): { start: Date; end: Date } | null {
-  if (period !== "today" && period !== "week" && period !== "month") {
+  if (period === "custom") {
+    const from = parseDateOnly(custom?.from);
+    const to = parseDateOnly(custom?.to);
+
+    if (!from || !to) return null;
+
+    let [first, last] = [from, to];
+
+    // Selected in the wrong order — treat as the same range.
+    if (
+      Date.UTC(first.year, first.month - 1, first.day) >
+      Date.UTC(last.year, last.month - 1, last.day)
+    ) {
+      [first, last] = [last, first];
+    }
+
+    return {
+      start: zonedMidnight(timeZone, first.year, first.month, first.day),
+      // Both selected dates are included: end = day after the last one.
+      end: zonedMidnight(timeZone, last.year, last.month, last.day + 1),
+    };
+  }
+
+  if (
+    ![
+      "today",
+      "yesterday",
+      "week",
+      "last_week",
+      "month",
+      "last_month",
+    ].includes(period)
+  ) {
     return null;
   }
 
@@ -151,6 +223,13 @@ export function getPeriodRange(
     };
   }
 
+  if (period === "yesterday") {
+    return {
+      start: zonedMidnight(timeZone, t.year, t.month, t.day - 1),
+      end: zonedMidnight(timeZone, t.year, t.month, t.day),
+    };
+  }
+
   if (period === "month") {
     return {
       start: zonedMidnight(timeZone, t.year, t.month, 1),
@@ -158,13 +237,53 @@ export function getPeriodRange(
     };
   }
 
+  if (period === "last_month") {
+    return {
+      start: zonedMidnight(timeZone, t.year, t.month - 1, 1),
+      end: zonedMidnight(timeZone, t.year, t.month, 1),
+    };
+  }
+
   // Days since Monday: Mon 0 ... Sat 5; Sunday counts back to the
   // Monday of the week that just ended (6).
   const sinceMonday = t.weekday === 0 ? 6 : t.weekday - 1;
+  const monday = t.day - sinceMonday;
+
+  if (period === "last_week") {
+    return {
+      start: zonedMidnight(timeZone, t.year, t.month, monday - 7),
+      // Previous Monday + 6 days = that Sunday 00:00 (Saturday is last in).
+      end: zonedMidnight(timeZone, t.year, t.month, monday - 1),
+    };
+  }
 
   return {
-    start: zonedMidnight(timeZone, t.year, t.month, t.day - sinceMonday),
+    start: zonedMidnight(timeZone, t.year, t.month, monday),
     // Monday + 6 days = Sunday 00:00, so Saturday is the last day in.
-    end: zonedMidnight(timeZone, t.year, t.month, t.day - sinceMonday + 6),
+    end: zonedMidnight(timeZone, t.year, t.month, monday + 6),
   };
+}
+
+
+// Validation for a Custom range, kept separate from getPeriodRange() (which
+// returns null for bad input and so must never be used to decide "show
+// everything"). Returns a message for the user, or null when both dates are
+// real calendar dates (either order is accepted).
+export function validateCustomRange(custom?: CustomRange): string | null {
+  const from = String(custom?.from ?? "").trim();
+  const to = String(custom?.to ?? "").trim();
+
+  if (!from || !to) {
+    return "Please select both a start date and an end date.";
+  }
+
+  if (!parseDateOnly(from)) {
+    return "Start date is not a valid date.";
+  }
+
+  if (!parseDateOnly(to)) {
+    return "End date is not a valid date.";
+  }
+
+  return null;
 }

@@ -14,7 +14,7 @@ import LeadToolbar from "./LeadToolbar";
 import LeadTable from "./LeadTable";
 import LeadsRealtimeRefresher from "./LeadsRealtimeRefresher";
 import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
-import { getPeriodRange } from "@/lib/timezone";
+import { getPeriodRange, validateCustomRange } from "@/lib/timezone";
 
 interface Lead {
   id: number;
@@ -68,6 +68,8 @@ interface InitialFilters {
   status: string;
   campaign: string;
   period: string;
+  periodFrom?: string;
+  periodTo?: string;
 }
 
 interface ChannelPartner {
@@ -93,9 +95,40 @@ const NO_PARTNERS: ChannelPartner[] = [];
 
 const PERIOD_LABELS: Record<string, string> = {
   today: "Today",
+  yesterday: "Yesterday",
+  last_week: "Last week",
+  last_month: "Last month",
+  custom: "Custom range",
   week: "This week",
   month: "This month",
 };
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// "2026-09-10" -> "10 Sep 2026" (plain string split, no timezone shift).
+function formatDay(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
+// Label for the active period, including periods that have no tab here
+// (arriving from the Dashboard): Yesterday, Last week, Last month, Custom.
+function getPeriodLabel(period: string, from?: string, to?: string) {
+  if (period === "custom") {
+    if (validateCustomRange({ from, to })) return "Custom range";
+
+    const [first, last] =
+      String(from) <= String(to) ? [from, to] : [to, from];
+
+    return `${formatDay(String(first))} - ${formatDay(String(last))}`;
+  }
+
+  return PERIOD_LABELS[period] ?? null;
+}
 
 const PERIOD_TABS: { key: string; label: string }[] = [
   { key: "today", label: "Today" },
@@ -158,6 +191,8 @@ function applyNormalFilters(
   leads: Lead[],
   filters: {
     period: string;
+    periodFrom?: string;
+    periodTo?: string;
     status: string[];
     fuel: string[];
     campaign: string[];
@@ -215,7 +250,12 @@ function applyNormalFilters(
 
   // Fixed calendar range in the business timezone (Today / Mon-Sat
   // week / calendar month), start inclusive, end exclusive.
-  const periodRange = getPeriodRange(filters.period);
+  const periodRange = getPeriodRange(
+    filters.period,
+    undefined,
+    undefined,
+    { from: filters.periodFrom, to: filters.periodTo }
+  );
 
   if (periodRange) {
     result = result.filter((lead) => {
@@ -324,20 +364,47 @@ export default function LeadsClient({
 
   const isSearchMode = search.trim().length > 0;
 
+  // A Custom range with a bad date must never fall back to "all time".
+  const customError =
+    period === "custom"
+      ? validateCustomRange({
+          from: initialFilters.periodFrom,
+          to: initialFilters.periodTo,
+        })
+      : null;
+
+  const periodLabel = getPeriodLabel(
+    period,
+    initialFilters.periodFrom,
+    initialFilters.periodTo
+  );
+
   const finalLeads = useMemo(() => {
     if (isSearchMode) {
       return globalSearch(leads, search);
     }
 
+    if (customError) return [];
+
     return applyNormalFilters(
       leads,
-      { period, status, fuel, campaign, agent, channel: channelName },
+      {
+        period,
+        periodFrom: initialFilters.periodFrom,
+        periodTo: initialFilters.periodTo,
+        status,
+        fuel,
+        campaign,
+        agent,
+        channel: channelName,
+      },
       todayStartIST,
       partnerIdByCode
     );
   }, [
     leads,
     isSearchMode,
+    customError,
     search,
     period,
     status,
@@ -431,11 +498,17 @@ export default function LeadsClient({
             </div>
           )}
 
-          {!isSearchMode && PERIOD_LABELS[period] && (
+          {!isSearchMode && customError && (
+            <div className="mt-2 text-sm font-medium text-red-600">
+              {customError}
+            </div>
+          )}
+
+          {!isSearchMode && periodLabel && (
             <div className="mt-2 text-sm text-slate-500">
               Showing:
               <span className="ml-2 rounded-md bg-indigo-50 px-2 py-1 font-semibold text-indigo-700">
-                {PERIOD_LABELS[period]}
+                {periodLabel}
               </span>
             </div>
           )}
@@ -463,6 +536,13 @@ export default function LeadsClient({
                 </button>
               );
             })}
+
+            {/* Neutral state for a Dashboard period with no tab here. */}
+            {periodLabel && !PERIOD_TABS.some((tab) => tab.key === period) && (
+              <span className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700">
+                {periodLabel}
+              </span>
+            )}
 
           </div>
 
@@ -555,6 +635,8 @@ export default function LeadsClient({
         channelName={channelName}
         setChannelName={setChannelName}
         period={period}
+        periodFrom={initialFilters.periodFrom}
+        periodTo={initialFilters.periodTo}
         searchResultIds={
           isSearchMode ? finalLeads.map((lead) => lead.id) : null
         }

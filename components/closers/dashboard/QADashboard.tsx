@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { adminSupabase } from "@/lib/admin";
 import StateClocks from "@/components/dashboard/StateClocks";
+import DashboardPeriodTabs from "@/components/dashboard/DashboardPeriodTabs";
+import { getPeriodRange } from "@/lib/timezone";
 import {
   ClipboardCheck,
   ListChecks,
@@ -9,44 +11,22 @@ import {
   XCircle,
 } from "lucide-react";
 
-const PERIOD_TABS: { key: string; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
-  { key: "month", label: "This month" },
-  { key: "all", label: "All time" },
-];
-
-function getPeriodStart(period: string): string | null {
-  const now = new Date();
-
-  if (period === "today") {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  }
-
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 7);
-    return start.toISOString();
-  }
-
-  if (period === "month") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 30);
-    return start.toISOString();
-  }
-
-  return null;
-}
-
 export default async function QADashboard({
   period = "today",
+  from = "",
+  to = "",
 }: {
   period?: string;
+  from?: string;
+  to?: string;
 }) {
   // Every Sold-derived count here is bucketed by closed_at (when the sale
   // outcome was actually recorded), not created_at — an old lead sold or
   // audited today still counts as today's activity.
-  const periodStart = getPeriodStart(period);
+  const periodRange = getPeriodRange(period, undefined, undefined, {
+    from,
+    to,
+  });
 
   let soldQuery = adminSupabase
     .from("leads")
@@ -71,11 +51,15 @@ export default async function QADashboard({
     .eq("status", "Sold")
     .not("qa_status", "in", "(Approved,Rejected)");
 
-  if (periodStart) {
-    soldQuery = soldQuery.gte("closed_at", periodStart);
-    approvedQuery = approvedQuery.gte("closed_at", periodStart);
-    rejectedQuery = rejectedQuery.gte("closed_at", periodStart);
-    notAuditedQuery = notAuditedQuery.gte("closed_at", periodStart);
+  if (periodRange) {
+    const start = periodRange.start.toISOString();
+    const end = periodRange.end.toISOString();
+
+    // start inclusive, end exclusive
+    soldQuery = soldQuery.gte("closed_at", start).lt("closed_at", end);
+    approvedQuery = approvedQuery.gte("closed_at", start).lt("closed_at", end);
+    rejectedQuery = rejectedQuery.gte("closed_at", start).lt("closed_at", end);
+    notAuditedQuery = notAuditedQuery.gte("closed_at", start).lt("closed_at", end);
   }
 
   const [
@@ -139,21 +123,7 @@ export default async function QADashboard({
     <div className="space-y-5">
       <StateClocks />
 
-      <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm w-fit">
-        {PERIOD_TABS.map((tab) => (
-          <Link
-            key={tab.key}
-            href={`/dashboard?period=${tab.key}`}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              period === tab.key
-                ? "bg-blue-600 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
+      <DashboardPeriodTabs period={period} from={from} to={to} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {cards.map((card) => {

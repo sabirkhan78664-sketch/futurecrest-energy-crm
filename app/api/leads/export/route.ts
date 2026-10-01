@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { adminSupabase } from "@/lib/admin";
-import { getPeriodRange } from "@/lib/timezone";
+import { getPeriodRange, validateCustomRange } from "@/lib/timezone";
 
 /*
 |--------------------------------------------------------------------------
@@ -198,8 +198,29 @@ export async function GET(req: NextRequest) {
   // (getPeriodRange), with the same date field rule: Sold leads by
   // closed_at, everything else by created_at. Start inclusive, end
   // exclusive. Applies to every role; "all" / missing = no restriction.
+  // Never export everything because a Custom date was invalid.
+  if (req.nextUrl.searchParams.get("period") === "custom") {
+    const problem = validateCustomRange({
+      from: req.nextUrl.searchParams.get("period_from"),
+      to: req.nextUrl.searchParams.get("period_to"),
+    });
+
+    if (problem) {
+      return NextResponse.json(
+        { success: false, message: problem },
+        { status: 400 }
+      );
+    }
+  }
+
   const periodRange = getPeriodRange(
-    req.nextUrl.searchParams.get("period") ?? ""
+    req.nextUrl.searchParams.get("period") ?? "",
+    undefined,
+    undefined,
+    {
+      from: req.nextUrl.searchParams.get("period_from"),
+      to: req.nextUrl.searchParams.get("period_to"),
+    }
   );
 
   if (periodRange) {
