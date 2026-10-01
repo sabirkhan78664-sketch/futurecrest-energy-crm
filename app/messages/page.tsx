@@ -583,6 +583,11 @@ function MessagesContent() {
     const poll = async () => {
       if (cancelled) return;
 
+      // A hidden tab can't show new messages — don't spend a server
+      // request every 3s on it. It catches up the moment the tab is
+      // visible again (see visibilitychange below).
+      if (document.visibilityState === "hidden") return;
+
       await fetchActiveMessages();
     };
 
@@ -594,9 +599,18 @@ function MessagesContent() {
       }
     }, 3000);
 
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [
     activeMode,

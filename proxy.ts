@@ -176,6 +176,18 @@ export async function proxy(request: NextRequest) {
   return NextResponse.redirect(new URL("/unauthorized", request.url));
 }
 
+// The proxy only needs to run for page navigations. Skipped entirely (so
+// no invocation, and no Supabase getUser()/profile lookup) for:
+//   - /api routes (already treated as public above; each route
+//     enforces its own auth)
+//   - Next.js build output (_next/static, _next/image)
+//   - favicon, manifest.json and the service worker
+//   - any static file by extension (images, fonts, css/js/maps, etc.)
+// Previously every logo/image/font request and every API call (e.g. the
+// Messages page's polling) ran the proxy and, for assets, did a full
+// auth + profile lookup.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
+  matcher: [
+    "/((?!api(?:/|$)|_next/static|_next/image|favicon\\.ico|manifest\\.json|sw\\.js|.*\\.(?:svg|png|jpe?g|gif|webp|avif|ico|bmp|css|js|mjs|map|woff2?|ttf|otf|eot|txt|xml|json|webmanifest|pdf|mp3|mp4|webm)$).*)",
+  ],
 };

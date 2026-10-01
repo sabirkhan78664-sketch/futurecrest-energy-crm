@@ -6,8 +6,23 @@
 // badge refreshes immediately without polling.
 export const UNREAD_MESSAGES_EVENT = "crm:unread-messages-changed";
 
+// The header and sidebar both ask for this on every navigation. Callers
+// arriving while a request is already in flight share its result instead
+// of sending a second identical request (never serves an old answer).
+let inFlight: Promise<number | null> | null = null;
+
 // Returns null on failure so callers can keep the last known count.
-export async function fetchUnreadMessageCount(): Promise<number | null> {
+export function fetchUnreadMessageCount(): Promise<number | null> {
+  if (!inFlight) {
+    inFlight = requestUnreadMessageCount().finally(() => {
+      inFlight = null;
+    });
+  }
+
+  return inFlight;
+}
+
+async function requestUnreadMessageCount(): Promise<number | null> {
   try {
     const response = await fetch("/api/messages/unread-count", {
       cache: "no-store",
