@@ -48,6 +48,10 @@ interface Props {
   channelName: string[];
   setChannelName: (value: string[]) => void;
 
+  period: string;
+  // Set only while the search box has text: the exact lead ids the table
+  // is showing, so the export matches it (the table ignores filters then).
+  searchResultIds?: number[] | null;
   setPeriod: (value: string) => void;
 
   uniqueAgents: { id: string; label: string; description?: string | null }[];
@@ -67,10 +71,39 @@ export default function LeadToolbar({
   setCampaign,
   channelName,
   setChannelName,
+  period,
+  searchResultIds = null,
   setPeriod,
   uniqueAgents,
   uniqueChannels,
 }: Props) {
+  async function exportSearchResults() {
+    try {
+      const response = await fetch("/api/leads/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: searchResultIds }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        alert(data.message || "Export failed.");
+        return;
+      }
+
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Export failed.");
+    }
+  }
+
   function resetFilters() {
     setSearch("");
     setStatus([]);
@@ -84,6 +117,11 @@ export default function LeadToolbar({
   const exportParams = new URLSearchParams();
   campaign.forEach((value) => exportParams.append("campaign", value));
   status.forEach((value) => exportParams.append("status", value));
+  fuel.forEach((value) => exportParams.append("fuel", value));
+  agent.forEach((value) => exportParams.append("agent", value));
+  channelName.forEach((value) => exportParams.append("channel_name", value));
+  // Same period the table is showing (server applies getPeriodRange).
+  exportParams.append("period", period);
   const exportHref = `/api/leads/export${
     exportParams.toString() ? `?${exportParams.toString()}` : ""
   }`;
@@ -167,14 +205,25 @@ export default function LeadToolbar({
             Refresh
           </button>
 
-          <a
-            href={exportHref}
-            download
-            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <Download size={16} />
-            Export CSV
-          </a>
+          {searchResultIds ? (
+            <button
+              type="button"
+              onClick={exportSearchResults}
+              className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <Download size={16} />
+              Export CSV
+            </button>
+          ) : (
+            <a
+              href={exportHref}
+              download
+              className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <Download size={16} />
+              Export CSV
+            </a>
+          )}
 
           <Link
             href="/leads/new"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/lib/auth";
 import { adminSupabase } from "@/lib/admin";
+import { getPeriodRange } from "@/lib/timezone";
 
 /*
 |--------------------------------------------------------------------------
@@ -41,34 +42,6 @@ function formatDateTime(value: string | null) {
 
 function yesNo(value: unknown) {
   return value ? "Yes" : "No";
-}
-
-function getPeriodStart(period: string | null): string | null {
-  if (!period || period === "all") return null;
-
-  const now = new Date();
-
-  if (period === "today") {
-    return new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    ).toISOString();
-  }
-
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 7);
-    return start.toISOString();
-  }
-
-  if (period === "month") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 30);
-    return start.toISOString();
-  }
-
-  return null;
 }
 
 const CSV_HEADERS = [
@@ -176,10 +149,6 @@ export async function GET(req: NextRequest) {
   if (isPartner) {
     query = query.eq("partner_code", profile.partner_code);
 
-    const periodStart = getPeriodStart(req.nextUrl.searchParams.get("period"));
-    if (periodStart) {
-      query = query.gte("created_at", periodStart);
-    }
   } else {
     // The Leads filters are multi-select, so the toolbar sends each
     // selected value as a repeated query param (?status=Sold&status=Lost)
@@ -195,6 +164,55 @@ export async function GET(req: NextRequest) {
     if (from) query = query.gte("created_at", from);
     if (to) query = query.lte("created_at", to);
     if (channel) query = query.eq("channel_name", channel);
+
+    // Same extra filters the Leads page applies (multi-select).
+    const fuel = req.nextUrl.searchParams.getAll("fuel");
+    const channels = req.nextUrl.searchParams.getAll("channel_name");
+    const agents = req.nextUrl.searchParams.getAll("agent");
+
+    if (fuel.length) query = query.in("fuel_type", fuel);
+    if (channels.length) query = query.in("channel_name", channels);
+
+    // Agent filter: leads assigned to the person, or submitted through
+    // the Channel Partner's partner_code.
+    if (agents.length) {
+      const { data: partners } = await adminSupabase
+        .from("profiles")
+        .select("partner_code")
+        .eq("role", "Channel Partner")
+        .in("id", agents)
+        .not("partner_code", "is", null);
+
+      const codes = (partners ?? []).map((p: any) => p.partner_code);
+      const clauses = [`assigned_agent.in.(${agents.join(",")})`];
+
+      if (codes.length) {
+        clauses.push(`partner_code.in.(${codes.map((c: string) => `"${c}"`).join(",")})`);
+      }
+
+      query = query.or(clauses.join(","));
+    }
+  }
+
+  // PERIOD — the same calendar range as the Leads page table
+  // (getPeriodRange), with the same date field rule: Sold leads by
+  // closed_at, everything else by created_at. Start inclusive, end
+  // exclusive. Applies to every role; "all" / missing = no restriction.
+  const periodRange = getPeriodRange(
+    req.nextUrl.searchParams.get("period") ?? ""
+  );
+
+  if (periodRange) {
+    const start = periodRange.start.toISOString();
+    const end = periodRange.end.toISOString();
+
+    query = query.or(
+      [
+        `and(status.eq.Sold,closed_at.gte.${start},closed_at.lt.${end})`,
+        `and(status.neq.Sold,created_at.gte.${start},created_at.lt.${end})`,
+        `and(status.is.null,created_at.gte.${start},created_at.lt.${end})`,
+      ].join(",")
+    );
   }
 
   const { data, error } = await query;
@@ -206,7 +224,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const csv = [CSV_HEADERS, ...(data ?? []).map(toRow)]
+  return csvResponse(data ?? []);
+}
+
+function csvResponse(leads: any[]) {
+  const csv = [CSV_HEADERS, ...leads.map(toRow)]
     .map((row) => row.map(csvEscape).join(","))
     .join("\n");
 
@@ -219,4 +241,74 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="leads-export-${today}.csv"`,
     },
   });
+}
+
+// SEARCH MODE — when the Leads search box has text, the table shows its
+// own search result set and ignores the toolbar filters. The page sends
+// those exact lead ids so the CSV is precisely what is on screen; the
+// same role rules as GET still apply (partners only ever get rows
+// carrying their own partner_code).
+export async function POST(req: NextRequest) {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    return NextResponse.json(
+      { success: false, message: "Not authenticated." },
+      { status: 401 }
+    );
+  }
+
+  const isPartner = profile.role === "Channel Partner";
+  const isAdmin = ["Admin", "Super Admin"].includes(profile.role);
+
+  if (!isPartner && !isAdmin) {
+    return NextResponse.json(
+      { success: false, message: "Not authorized to export leads." },
+      { status: 403 }
+    );
+  }
+
+  if (isPartner && !profile.partner_code) {
+    return NextResponse.json(
+      { success: false, message: "No partner code assigned to this account." },
+      { status: 403 }
+    );
+  }
+
+  const body = await req.json().catch(() => ({}));
+
+  const ids: number[] = Array.isArray(body?.ids)
+    ? body.ids.map(Number).filter((id: number) => Number.isInteger(id))
+    : [];
+
+  const leads: any[] = [];
+
+  // Chunked so a large result list doesn't overflow the request URL.
+  for (let i = 0; i < ids.length; i += 200) {
+    let query = adminSupabase
+      .from("leads")
+      .select("*")
+      .in("id", ids.slice(i, i + 200));
+
+    if (isPartner) query = query.eq("partner_code", profile.partner_code);
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
+    }
+
+    leads.push(...(data ?? []));
+  }
+
+  leads.sort(
+    (a, b) =>
+      new Date(b.created_at ?? 0).getTime() -
+      new Date(a.created_at ?? 0).getTime()
+  );
+
+  return csvResponse(leads);
 }

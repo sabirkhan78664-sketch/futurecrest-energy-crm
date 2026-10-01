@@ -14,6 +14,7 @@ import LeadToolbar from "./LeadToolbar";
 import LeadTable from "./LeadTable";
 import LeadsRealtimeRefresher from "./LeadsRealtimeRefresher";
 import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
+import { getPeriodRange } from "@/lib/timezone";
 
 interface Lead {
   id: number;
@@ -112,31 +113,6 @@ const dayFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
-
-function getPeriodStart(
-  period: string,
-  todayStartIST: string
-): Date | null {
-  if (period === "today") {
-    return new Date(todayStartIST);
-  }
-
-  const now = new Date();
-
-  if (period === "week") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 7);
-    return start;
-  }
-
-  if (period === "month") {
-    const start = new Date(now);
-    start.setDate(start.getDate() - 30);
-    return start;
-  }
-
-  return null;
-}
 
 // Search mode overrides every other filter — searches the full
 // role-permitted dataset, not whatever the normal filters would show.
@@ -237,16 +213,20 @@ function applyNormalFilters(
     );
   }
 
-  const periodStart = getPeriodStart(filters.period, todayStartIST);
+  // Fixed calendar range in the business timezone (Today / Mon-Sat
+  // week / calendar month), start inclusive, end exclusive.
+  const periodRange = getPeriodRange(filters.period);
 
-  if (periodStart) {
+  if (periodRange) {
     result = result.filter((lead) => {
       const isSold = lead.status === "Sold";
       const dateValue = isSold ? lead.closed_at : lead.created_at;
 
       if (!dateValue) return false;
 
-      return new Date(dateValue) >= periodStart;
+      const date = new Date(dateValue);
+
+      return date >= periodRange.start && date < periodRange.end;
     });
   }
 
@@ -574,6 +554,10 @@ export default function LeadsClient({
         setCampaign={setCampaign}
         channelName={channelName}
         setChannelName={setChannelName}
+        period={period}
+        searchResultIds={
+          isSearchMode ? finalLeads.map((lead) => lead.id) : null
+        }
         setPeriod={setPeriod}
         uniqueAgents={uniqueAgents}
         uniqueChannels={uniqueChannels}

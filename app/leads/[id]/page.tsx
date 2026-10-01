@@ -409,9 +409,7 @@ export default async function LeadDetailsPage({
                   person={
                     lead.assignedAgent ||
                     lead.agent ||
-                    (lead.creator?.role !== "Closer"
-                      ? lead.creator
-                      : null) ||
+                    lead.creator ||
                     lead.agent_name
                   }
                 />

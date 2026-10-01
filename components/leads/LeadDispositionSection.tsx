@@ -259,12 +259,11 @@ export default function LeadDispositionSection({
   // Partner submission uses, and only falling back to the original
   // creator (created_by, which never changes on reassignment) when
   // there's no assigned-agent profile at all.
-  // A Closer creator is the lead owner, not its agent.
   const agent =
     lead.assignedAgent ||
     lead.agent ||
     (lead.agent_name ? { full_name: lead.agent_name } : null) ||
-    (lead.creator?.role !== "Closer" ? lead.creator : null);
+    lead.creator;
 
   const owner = lead.closer || null;
 

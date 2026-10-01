@@ -590,9 +590,9 @@ export default function LeadTable({
                               (Partner)
                             </span>
                           </>
-                        ) : lead.creator &&
-                          // A Closer creator already shows as Assigned Closer.
-                          lead.creator.role !== "Closer" ? (
+                        ) : lead.creator ? (
+                          // Creator = owner: also covers a Closer who
+                          // created their own lead.
                           lead.creator.full_name ||
                           lead.creator.username ||
                           "Agent"
