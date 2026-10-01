@@ -23,11 +23,17 @@ export default function DashboardPeriodTabs({
   from = "",
   to = "",
   basePath = "/dashboard",
+  onSelectPeriod,
+  onApplyCustom,
 }: {
   period: string;
   from?: string;
   to?: string;
   basePath?: string;
+  // Controlled mode (Leads page keeps the period in client state): when
+  // set, tabs call these instead of navigating by URL.
+  onSelectPeriod?: (period: string) => void;
+  onApplyCustom?: (from: string, to: string) => void;
 }) {
   const router = useRouter();
 
@@ -51,6 +57,11 @@ export default function DashboardPeriodTabs({
 
     setError(null);
 
+    if (onApplyCustom) {
+      onApplyCustom(start, end);
+      return;
+    }
+
     router.push(
       `${basePath}?period=custom&from=${start}&to=${end}`
     );
@@ -73,6 +84,18 @@ export default function DashboardPeriodTabs({
               type="button"
               onClick={() => setShowCustom((previous) => !previous)}
               className={tabClass(period === "custom")}
+            >
+              {tab.label}
+            </button>
+          ) : onSelectPeriod ? (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => {
+                setError(null);
+                onSelectPeriod(tab.key);
+              }}
+              className={tabClass(period === tab.key)}
             >
               {tab.label}
             </button>

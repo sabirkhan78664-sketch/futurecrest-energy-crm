@@ -15,6 +15,7 @@ import LeadTable from "./LeadTable";
 import LeadsRealtimeRefresher from "./LeadsRealtimeRefresher";
 import { CHANNEL_OPTIONS } from "@/lib/leadOptions";
 import { getPeriodRange, validateCustomRange } from "@/lib/timezone";
+import DashboardPeriodTabs from "@/components/dashboard/DashboardPeriodTabs";
 
 interface Lead {
   id: number;
@@ -94,6 +95,7 @@ interface Props {
 const NO_PARTNERS: ChannelPartner[] = [];
 
 const PERIOD_LABELS: Record<string, string> = {
+  all: "All time",
   today: "Today",
   yesterday: "Yesterday",
   last_week: "Last week",
@@ -129,13 +131,6 @@ function getPeriodLabel(period: string, from?: string, to?: string) {
 
   return PERIOD_LABELS[period] ?? null;
 }
-
-const PERIOD_TABS: { key: string; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
-  { key: "month", label: "This month" },
-  { key: "all", label: "All time" },
-];
 
 // Evaluated in the business's own timezone (Asia/Kolkata) regardless of
 // the viewer's own machine/browser timezone — safe to run client-side
@@ -292,6 +287,12 @@ export default function LeadsClient({
   );
   const [channelName, setChannelName] = useState<string[]>([]);
   const [period, setPeriod] = useState(initialFilters.period);
+  const [customFrom, setCustomFrom] = useState(
+    initialFilters.periodFrom ?? ""
+  );
+  const [customTo, setCustomTo] = useState(
+    initialFilters.periodTo ?? ""
+  );
 
   const partnerIdByCode = useMemo(
     () =>
@@ -368,15 +369,15 @@ export default function LeadsClient({
   const customError =
     period === "custom"
       ? validateCustomRange({
-          from: initialFilters.periodFrom,
-          to: initialFilters.periodTo,
+          from: customFrom,
+          to: customTo,
         })
       : null;
 
   const periodLabel = getPeriodLabel(
     period,
-    initialFilters.periodFrom,
-    initialFilters.periodTo
+    customFrom,
+    customTo
   );
 
   const finalLeads = useMemo(() => {
@@ -390,8 +391,8 @@ export default function LeadsClient({
       leads,
       {
         period,
-        periodFrom: initialFilters.periodFrom,
-        periodTo: initialFilters.periodTo,
+        periodFrom: customFrom,
+        periodTo: customTo,
         status,
         fuel,
         campaign,
@@ -405,6 +406,8 @@ export default function LeadsClient({
     leads,
     isSearchMode,
     customError,
+    customFrom,
+    customTo,
     search,
     period,
     status,
@@ -516,35 +519,17 @@ export default function LeadsClient({
 
         <div className="flex flex-wrap items-center gap-3">
 
-          <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-
-            {PERIOD_TABS.map((tab) => {
-              const isActive = period === tab.key;
-
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setPeriod(tab.key)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    isActive
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-
-            {/* Neutral state for a Dashboard period with no tab here. */}
-            {periodLabel && !PERIOD_TABS.some((tab) => tab.key === period) && (
-              <span className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700">
-                {periodLabel}
-              </span>
-            )}
-
-          </div>
+          <DashboardPeriodTabs
+            period={period}
+            from={customFrom}
+            to={customTo}
+            onSelectPeriod={setPeriod}
+            onApplyCustom={(from, to) => {
+              setCustomFrom(from);
+              setCustomTo(to);
+              setPeriod("custom");
+            }}
+          />
 
           <Link
             href="/leads/new"
@@ -635,8 +620,8 @@ export default function LeadsClient({
         channelName={channelName}
         setChannelName={setChannelName}
         period={period}
-        periodFrom={initialFilters.periodFrom}
-        periodTo={initialFilters.periodTo}
+        periodFrom={customFrom}
+        periodTo={customTo}
         searchResultIds={
           isSearchMode ? finalLeads.map((lead) => lead.id) : null
         }
