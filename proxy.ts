@@ -6,10 +6,12 @@ import { adminSupabase } from "@/lib/admin";
 |--------------------------------------------------------------------------
 | IP-RESTRICTED ROLE GATING
 |--------------------------------------------------------------------------
-| Super Admin and Channel Partner may sign in from anywhere. Admin, Agent,
-| Closer and QA are restricted to the office IP range — this reflects the
-| fact that partner staff and top-level admins legitimately work off-site,
-| while day-to-day operational roles are expected to work from the office.
+| Super Admin, Channel Partner and QA may sign in from anywhere. Admin,
+| Agent and Closer are restricted to the office IP range — this reflects
+| the fact that partner staff, QA auditors and top-level admins
+| legitimately work off-site, while day-to-day operational roles are
+| expected to work from the office. The role is always read server-side
+| from `profiles` after getUser() — never from the browser.
 |
 | NOTE: This is `proxy.ts`, not `middleware.ts` — Next.js 16 renamed the
 | middleware file convention to Proxy (`export function proxy`, project
@@ -36,8 +38,8 @@ const PUBLIC_PATHS = [
   "/sw.js", // service worker — must be reachable with no session too
 ];
 
-const OFFICE_ONLY_ROLES = ["Admin", "Agent", "Closer", "QA"];
-const UNRESTRICTED_ROLES = ["Super Admin", "Channel Partner"];
+const OFFICE_ONLY_ROLES = ["Admin", "Agent", "Closer"];
+const UNRESTRICTED_ROLES = ["Super Admin", "Channel Partner", "QA"];
 
 function ipToInt(ip: string): number {
   const parts = ip.split(".").map(Number);
